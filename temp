@@ -1,0 +1,400 @@
+diff --git a/extensions/browser/BUILD.gn b/extensions/browser/BUILD.gn
+index cb1dfb9528..a1ff043d7d 100644
+--- a/extensions/browser/BUILD.gn
++++ b/extensions/browser/BUILD.gn
+@@ -932,6 +932,7 @@ source_set("unit_tests") {
+     "requirements_checker_unittest.cc",
+     "sandboxed_unpacker_unittest.cc",
+     "service_worker/worker_id_set_unittest.cc",
++    "state_store_unittest.cc",
+     "updater/extension_downloader_unittest.cc",
+     "updater/extension_installer_unittest.cc",
+     "updater/safe_manifest_parser_unittest.cc",
+diff --git a/extensions/browser/api/alarms/alarm_manager.cc b/extensions/browser/api/alarms/alarm_manager.cc
+index 48d7f83388..ef1f359610 100644
+--- a/extensions/browser/api/alarms/alarm_manager.cc
++++ b/extensions/browser/api/alarms/alarm_manager.cc
+@@ -125,7 +125,7 @@ AlarmManager::AlarmManager(content::BrowserContext* context)
+ 
+   StateStore* storage = ExtensionSystem::Get(browser_context_)->state_store();
+   if (storage)
+-    storage->RegisterKey(kRegisteredAlarms);
++    storage->RegisterPersistentKey(kRegisteredAlarms);
+ }
+ 
+ AlarmManager::~AlarmManager() = default;
+diff --git a/extensions/browser/install_reason.h b/extensions/browser/install_reason.h
+new file mode 100644
+index 0000000000..0272d6c4e6
+--- /dev/null
++++ b/extensions/browser/install_reason.h
+@@ -0,0 +1,68 @@
++// Copyright 2014 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef EXTENSIONS_BROWSER_INSTALL_REASON_H_
++#define EXTENSIONS_BROWSER_INSTALL_REASON_H_
++
++namespace extensions {
++
++// Do not remove/reorder these, as they are used in install ping data and we
++// depend on their values being stable.
++enum InstallReason {
++  INSTALL_REASON_NONE,
++  INSTALL_REASON_UPDATE,
++
++  INSTALL_REASON_MAX,  // Should always be the last value
++
++/*
++
++  UNINSTALL_REASON_FOR_TESTING,         // Used for testing code only
++  UNINSTALL_REASON_USER_INITIATED,      // User performed some UI gesture
++  UNINSTALL_REASON_EXTENSION_DISABLED,  // Extension disabled due to error
++  UNINSTALL_REASON_STORAGE_THRESHOLD_EXCEEDED,
++  UNINSTALL_REASON_INSTALL_CANCELED,
++  UNINSTALL_REASON_MANAGEMENT_API,
++  UNINSTALL_REASON_SYNC,
++  UNINSTALL_REASON_ORPHANED_THEME,
++  UNINSTALL_REASON_ORPHANED_EPHEMERAL_EXTENSION,
++  // The entries below imply bypassing checking user has permission to
++  // uninstall the corresponding extension id.
++  UNINSTALL_REASON_ORPHANED_EXTERNAL_EXTENSION,
++  UNINSTALL_REASON_ORPHANED_SHARED_MODULE,
++  UNINSTALL_REASON_INTERNAL_MANAGEMENT,  // Internal extensions (see usages)
++  UNINSTALL_REASON_REINSTALL,
++  UNINSTALL_REASON_COMPONENT_REMOVED,
++  UNINSTALL_REASON_MIGRATED,  // Migrated to component extensions
++
++  UNINSTALL_REASON_CHROME_WEBSTORE,
++
++  UNINSTALL_REASON_ARC,  // Web app that was uninstalled via ARC
++
++  UNINSTALL_REASON_MAX,  // Should always be the last value
++  */
++};
++
++// The source of an uninstall. Do *NOT* reorder or delete any of the named
++// values, as they are used in UMA. Put all new values above
++// NUM_UNINSTALL_SOURCES.
++/*
++enum UninstallSource {
++  UNINSTALL_SOURCE_FOR_TESTING,
++  UNINSTALL_SOURCE_TOOLBAR_CONTEXT_MENU,
++  UNINSTALL_SOURCE_PERMISSIONS_INCREASE,
++  UNINSTALL_SOURCE_STORAGE_THRESHOLD_EXCEEDED,
++  UNINSTALL_SOURCE_APP_LIST,
++  UNINSTALL_SOURCE_APP_INFO_DIALOG,
++  UNINSTALL_SOURCE_CHROME_APPS_PAGE,
++  UNINSTALL_SOURCE_CHROME_EXTENSIONS_PAGE,
++  UNINSTALL_SOURCE_EXTENSION,
++  UNINSTALL_SOURCE_CHROME_WEBSTORE,
++  UNINSTALL_SOURCE_HOSTED_APP_MENU,
++  NUM_UNINSTALL_SOURCES,
++};
++*/
++
++}  // namespace extensions
++
++#endif  // EXTENSIONS_BROWSER_INSTALL_REASON_H_
+diff --git a/extensions/browser/state_store.cc b/extensions/browser/state_store.cc
+index 5f38442715..6ada9df40a 100644
+--- a/extensions/browser/state_store.cc
++++ b/extensions/browser/state_store.cc
+@@ -110,9 +110,15 @@ StateStore::~StateStore() {
+ }
+ 
+ void StateStore::RegisterKey(const std::string& key) {
++  DCHECK(persistent_registered_keys_.find(key) == persistent_registered_keys_.end());
+   registered_keys_.insert(key);
+ }
+ 
++void StateStore::RegisterPersistentKey(const std::string& key) {
++  DCHECK(registered_keys_.find(key) == registered_keys_.end());
++  persistent_registered_keys_.emplace(key, true);
++}
++
+ void StateStore::GetExtensionValue(const std::string& extension_id,
+                                    const std::string& key,
+                                    ReadCallback callback) {
+@@ -168,14 +174,14 @@ void StateStore::OnExtensionWillBeInstalled(
+     const Extension* extension,
+     bool is_update,
+     const std::string& old_name) {
+-  RemoveKeysForExtension(extension->id());
++  RemoveKeysForExtension(extension->id(), is_update);
+ }
+ 
+ void StateStore::OnExtensionUninstalled(
+     content::BrowserContext* browser_context,
+     const Extension* extension,
+     extensions::UninstallReason reason) {
+-  RemoveKeysForExtension(extension->id());
++  RemoveKeysForExtension(extension->id(), false);
+ }
+ 
+ void StateStore::Init() {
+@@ -185,8 +191,8 @@ void StateStore::Init() {
+   task_queue_->SetReady();
+ }
+ 
+-void StateStore::RemoveKeysForExtension(const std::string& extension_id) {
+-  for (auto key = registered_keys_.begin(); key != registered_keys_.end();
++void StateStore::ClearKeys(const std::string& extension_id, std::set<std::string> keys) {
++  for (auto key = keys.begin(); key != keys.end();
+        ++key) {
+     task_queue_->InvokeWhenReady(base::BindOnce(
+         &value_store::ValueStoreFrontend::Remove,
+@@ -194,4 +200,10 @@ void StateStore::RemoveKeysForExtension(const std::string& extension_id) {
+   }
+ }
+ 
++void StateStore::RemoveKeysForExtension(const std::string& extension_id, bool is_update) {
++  ClearKeys(extension_id, registered_keys_);
++  if (!is_update)
++    ClearKeys(extension_id, persistent_registered_keys_);
++}
++
+ }  // namespace extensions
+diff --git a/extensions/browser/state_store.h b/extensions/browser/state_store.h
+index ee46324caf..e5935a2cce 100644
+--- a/extensions/browser/state_store.h
++++ b/extensions/browser/state_store.h
+@@ -57,10 +57,17 @@ class StateStore : public ExtensionRegistryObserver {
+ 
+   ~StateStore() override;
+ 
+-  // Register a key for removal upon extension install/uninstall. We remove
+-  // for install to reset state when an extension upgrades.
++  void ClearKeys(const std::string& extension_id, const std::set<std::string> keys);
++
++  // Register a key for removal upon extension install/uninstall and update
++  // We remove for install to reset state when an extension upgrades.
+   void RegisterKey(const std::string& key);
+ 
++  // Register a key for removal upon extension install/uninstall, but not update
++  // We remove for install which are not updates to reset state when an extension installs
++  // for the first time.
++  void RegisterPersistentKey(const std::string& key);
++
+   // Get the value associated with the given extension and key, and pass
+   // it to |callback| asynchronously.
+   void GetExtensionValue(const std::string& extension_id,
+@@ -91,8 +98,9 @@ class StateStore : public ExtensionRegistryObserver {
+ 
+   void Init();
+ 
+-  // Removes all keys registered for the given extension.
+-  void RemoveKeysForExtension(const std::string& extension_id);
++  // Removes keys registered for the given extension, except for update-persistent ones
++  // if it is an update.
++  void RemoveKeysForExtension(const std::string& extension_id, bool is_update);
+ 
+   // ExtensionRegistryObserver implementation.
+   void OnExtensionUninstalled(content::BrowserContext* browser_context,
+@@ -106,10 +114,14 @@ class StateStore : public ExtensionRegistryObserver {
+   // The store that holds our key/values.
+   std::unique_ptr<value_store::ValueStoreFrontend> store_;
+ 
+-  // List of all known keys. They will be cleared for each extension when it is
+-  // (un)installed.
++  // List of all known keys which need to be cleared when extension is (un)installed,
++  // including when it is updated.
+   std::set<std::string> registered_keys_;
+ 
++  // List of all known keys which need to be cleared when extension is uninstalled,
++  // but not when it is updated.
++  std::set<std::string> persistent_registered_keys_;
++
+   // Keeps track of tasks we have delayed while starting up.
+   std::unique_ptr<DelayedTaskQueue> task_queue_;
+ 
+diff --git a/extensions/browser/state_store_unittest.cc b/extensions/browser/state_store_unittest.cc
+new file mode 100644
+index 0000000000..1220a70e4a
+--- /dev/null
++++ b/extensions/browser/state_store_unittest.cc
+@@ -0,0 +1,183 @@
++// Copyright 2023 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "extensions/browser/state_store.h"
++
++// Copyright 2012 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++
++
++#include "extensions/browser/warning_service.h"
++
++#include "content/public/test/test_browser_context.h"
++#include "extensions/browser/extensions_test.h"
++#include "testing/gmock/include/gmock/gmock.h"
++#include "testing/gtest/include/gtest/gtest.h"
++
++#include "components/value_store/test_value_store_factory.h"
++#include "components/value_store/testing_value_store.h"
++
++
++namespace extensions {
++
++namespace {
++
++const char kExpensionId[] = "test_extension_id";
++const char kKey[] = "test_key";
++const char kValue[] = "test_value";
++
++using StateStoreTest = ExtensionsTest;
++
++}  // namespace
++
++class TestEnvironment {
++ public:
++  TestEnvironment() {
++    content::TestBrowserContext browser_context;
++    value_store::TestValueStoreFactory* store_factory = new value_store::TestValueStoreFactory();
++    state_store_ = new StateStore(&browser_context, store_factory, StateStore::BackendType::STATE, false);
++    extension_registry_ = ExtensionRegistry::Get(&browser_context);
++
++    base::Value::Dict manifest;
++    manifest.Set("manifest_version", 3);
++    manifest.Set("name", "Test");
++    manifest.Set("version", "1");
++
++    std::string error;
++    extension_ = extensions::Extension::Create(
++      base::FilePath(),
++      extensions::mojom::ManifestLocation::kInternal,
++      manifest,
++      0,
++      kExpensionId,
++      &error);
++    LOG(WARNING) << error;
++    CHECK(extension_.get());
++    CHECK_EQ(error, "");
++  }
++
++  extensions::Extension* GetExtension() {
++    return this->extension_.get();
++  }
++
++  ExtensionRegistry* GetExtensionRegistry() {
++    return this->extension_registry_;
++  }
++
++  StateStore* GetStateStore() {
++    return this->state_store_;
++  }
++
++  private:
++    raw_ptr<StateStore> state_store_;
++    raw_ptr<ExtensionRegistry> extension_registry_;
++    scoped_refptr<extensions::Extension> extension_;
++};
++
++// Check that after setting a value, we get the same value out
++TEST_F(StateStoreTest, SetAndGetValue) {
++  content::TestBrowserContext browser_context;
++  value_store::TestValueStoreFactory* store_factory = new value_store::TestValueStoreFactory();
++  StateStore* state_store = new StateStore(&browser_context, store_factory, StateStore::BackendType::STATE, false);
++
++  state_store->SetExtensionValue(kExpensionId, kKey, base::Value(kValue));
++  state_store->GetExtensionValue(kExpensionId, kKey, base::BindOnce([](absl::optional<base::Value> value) {
++    ASSERT_TRUE(value.has_value());
++    ASSERT_EQ(*value, kValue);
++  }));
++}
++
++// Check that extension uninstall clears the nonpersistent data
++TEST_F(StateStoreTest, NonpersistentValueClearedOnUninstall) {
++  TestEnvironment test;
++  extensions::Extension* extension = test.GetExtension();
++  StateStore* state_store = test.GetStateStore();
++  ExtensionRegistry* extension_registry = test.GetExtensionRegistry();
++
++  state_store->RegisterKey(kKey);
++
++  state_store->SetExtensionValue(kExpensionId, kKey, base::Value(kValue));
++
++  extension_registry->TriggerOnUninstalled(extension, extensions::UninstallReason::UNINSTALL_REASON_FOR_TESTING);
++
++  state_store->GetExtensionValue(kExpensionId, kKey, base::BindOnce([](absl::optional<base::Value> value) {
++    ASSERT_FALSE(value.has_value());
++  }));
++}
++
++// Check that new extension installation clears the nonpersistent data
++TEST_F(StateStoreTest, NonpersistentValueClearedBeforeNewInstall) {
++  TestEnvironment test;
++  extensions::Extension* extension = test.GetExtension();
++  StateStore* state_store = test.GetStateStore();
++  ExtensionRegistry* extension_registry = test.GetExtensionRegistry();
++
++  state_store->RegisterKey(kKey);
++
++  state_store->SetExtensionValue(kExpensionId, kKey, base::Value(kValue));
++
++  extension_registry->TriggerOnWillBeInstalled(extension, false, "");
++
++  state_store->GetExtensionValue(kExpensionId, kKey, base::BindOnce([](absl::optional<base::Value> value) {
++    ASSERT_FALSE(value.has_value());
++  }));
++}
++
++// Check that update extension installation clears the nonpersistent data
++TEST_F(StateStoreTest, NonpersistentValueClearedBeforeUpdateInstall) {
++  TestEnvironment test;
++  extensions::Extension* extension = test.GetExtension();
++  StateStore* state_store = test.GetStateStore();
++  ExtensionRegistry* extension_registry = test.GetExtensionRegistry();
++
++  state_store->RegisterKey(kKey);
++
++  state_store->SetExtensionValue(kExpensionId, kKey, base::Value(kValue));
++
++  extension_registry->TriggerOnWillBeInstalled(extension, true, "");
++
++  state_store->GetExtensionValue(kExpensionId, kKey, base::BindOnce([](absl::optional<base::Value> value) {
++    ASSERT_FALSE(value.has_value());
++  }));
++}
++
++// Check that extension uninstall clears the persistent data
++TEST_F(StateStoreTest, ValueClearedOnUninstall) {
++  TestEnvironment test;
++  extensions::Extension* extension = test.GetExtension();
++  StateStore* state_store = test.GetStateStore();
++  ExtensionRegistry* extension_registry = test.GetExtensionRegistry();
++
++  state_store->RegisterPersistentKey(kKey);
++
++  state_store->SetExtensionValue(kExpensionId, kKey, base::Value(kValue));
++
++  extension_registry->TriggerOnUninstalled(extension, extensions::UninstallReason::UNINSTALL_REASON_FOR_TESTING);
++
++  state_store->GetExtensionValue(kExpensionId, kKey, base::BindOnce([](absl::optional<base::Value> value) {
++    ASSERT_FALSE(value.has_value());
++  }));
++}
++
++// Check that extension update does not clear the persistent data
++TEST_F(StateStoreTest, ValueClearedOnUninstall) {
++  TestEnvironment test;
++  extensions::Extension* extension = test.GetExtension();
++  StateStore* state_store = test.GetStateStore();
++  ExtensionRegistry* extension_registry = test.GetExtensionRegistry();
++
++  state_store->RegisterPersistentKey(kKey);
++
++  state_store->SetExtensionValue(kExpensionId, kKey, base::Value(kValue));
++
++  extension_registry->TriggerOnWillBeInstalled(extension, true, "");
++
++  state_store->GetExtensionValue(kExpensionId, kKey, base::BindOnce([](absl::optional<base::Value> value) {
++    ASSERT_TRUE(value.has_value());
++    ASSERT_EQ(*value, kValue);
++  }));
++}
++}  // namespace extensions

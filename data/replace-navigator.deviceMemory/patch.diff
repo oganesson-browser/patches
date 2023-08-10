@@ -1,0 +1,14 @@
+diff --git a/third_party/blink/common/device_memory/approximated_device_memory.cc b/third_party/blink/common/device_memory/approximated_device_memory.cc
+index ac3de2bc10..b024f1ac8a 100644
+--- a/third_party/blink/common/device_memory/approximated_device_memory.cc
++++ b/third_party/blink/common/device_memory/approximated_device_memory.cc
+@@ -18,7 +18,8 @@ void ApproximatedDeviceMemory::Initialize() {
+   if (approximated_device_memory_gb_ > 0.0)
+     return;
+   DCHECK_EQ(0, physical_memory_mb_);
+-  physical_memory_mb_ = ::base::SysInfo::AmountOfPhysicalMemoryMB();
++  // Set physical_memory_mb_ to 8GiB represented in MiB;
++  physical_memory_mb_ = 8.0 * 1024.0;
+   CalculateAndSetApproximatedDeviceMemory();
+ }
+ 

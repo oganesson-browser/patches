@@ -1,0 +1,43 @@
+diff --git a/components/embedder_support/user_agent_utils.cc b/components/embedder_support/user_agent_utils.cc
+index 2ab34ff2fc..1a1102e08c 100644
+--- a/components/embedder_support/user_agent_utils.cc
++++ b/components/embedder_support/user_agent_utils.cc
+@@ -597,6 +597,11 @@ blink::UserAgentMetadata GetUserAgentMetadata(const PrefService* pref_service) {
+ 
+ #if BUILDFLAG(IS_WIN)
+   metadata.platform_version = GetWindowsPlatformVersion();
++#elif BUILDFLAG(IS_LINUX)
++  // Step 1 of "get the platform version" algorithm:
++  // If platform is "Linux": Return the empty string.
++  // Source: https://wicg.github.io/ua-client-hints/#sec-ch-ua-platform-version
++  metadata.platform_version = "";
+ #else
+   int32_t major, minor, bugfix = 0;
+   base::SysInfo::OperatingSystemVersionNumbers(&major, &minor, &bugfix);
+diff --git a/components/embedder_support/user_agent_utils_unittest.cc b/components/embedder_support/user_agent_utils_unittest.cc
+index b55a6b3012..1bdd5907e3 100644
+--- a/components/embedder_support/user_agent_utils_unittest.cc
++++ b/components/embedder_support/user_agent_utils_unittest.cc
+@@ -897,6 +897,8 @@ TEST_F(UserAgentUtilsTest, UserAgentMetadata) {
+ 
+ #if BUILDFLAG(IS_WIN)
+   VerifyWinPlatformVersion(metadata.platform_version);
++#elif BUILDFLAG(IS_LINUX)
++  EXPECT_EQ(metadata.platform_version, "");
+ #else
+   int32_t major, minor, bugfix = 0;
+   base::SysInfo::OperatingSystemVersionNumbers(&major, &minor, &bugfix);
+diff --git a/third_party/blink/common/user_agent/user_agent_mojom_traits.cc b/third_party/blink/common/user_agent/user_agent_mojom_traits.cc
+index 475794232e..5b003202bd 100644
+--- a/third_party/blink/common/user_agent/user_agent_mojom_traits.cc
++++ b/third_party/blink/common/user_agent/user_agent_mojom_traits.cc
+@@ -48,6 +48,9 @@ bool StructTraits<blink::mojom::UserAgentMetadataDataView,
+   if (!data.ReadPlatformVersion(&string))
+     return false;
+   out->platform_version = string;
++  if (out->platform == "Linux") {
++    out->platform_version = "";
++  }
+ 
+   if (!data.ReadArchitecture(&string))
+     return false;

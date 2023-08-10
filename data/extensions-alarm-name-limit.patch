@@ -1,0 +1,60 @@
+diff --git a/chrome/test/data/extensions/api_test/alarms/count/background.js b/chrome/test/data/extensions/api_test/alarms/count/background.js
+index 75d4066f66..89cfb17eb0 100644
+--- a/chrome/test/data/extensions/api_test/alarms/count/background.js
++++ b/chrome/test/data/extensions/api_test/alarms/count/background.js
+@@ -33,4 +33,15 @@ chrome.test.runTests([
+       chrome.test.succeed();
+     });
+   },
++
++  async function setLongName() {
++    chrome.alarms.create('a'.repeat(49), createParams, () => {
++      chrome.test.assertNoLastError();
++      chrome.alarms.create('a'.repeat(50), createParams, () => {
++        chrome.test.assertLastError(
++          'Alarm name cannot be longer than 50 characters.');
++        chrome.test.succeed();
++      });
++    });
++  },
+ ]);
+diff --git a/extensions/browser/api/alarms/alarm_manager.h b/extensions/browser/api/alarms/alarm_manager.h
+index c23f78a457..dbf749500a 100644
+--- a/extensions/browser/api/alarms/alarm_manager.h
++++ b/extensions/browser/api/alarms/alarm_manager.h
+@@ -73,6 +73,9 @@ class AlarmManager : public BrowserContextKeyedAPI,
+   // An extension can have at most this many active alarms.
+   static constexpr int kMaxAlarmsPerExtension = 500;
+ 
++  // An extension alarm name length can be no longer than this value.
++  static constexpr size_t kMaxAlarmsNameLength = 50;
++
+   class Delegate {
+    public:
+     virtual ~Delegate() {}
+diff --git a/extensions/browser/api/alarms/alarms_api.cc b/extensions/browser/api/alarms/alarms_api.cc
+index 3ba71b324f..fd742d389e 100644
+--- a/extensions/browser/api/alarms/alarms_api.cc
++++ b/extensions/browser/api/alarms/alarms_api.cc
+@@ -31,6 +31,8 @@ constexpr char kBothRelativeAndAbsoluteTime[] =
+     "Cannot set both when and delayInMinutes.";
+ constexpr char kNoScheduledTime[] =
+     "Must set at least one of when, delayInMinutes, or periodInMinutes.";
++constexpr char kMaxAlarmsNameLengthError[] =
++    "Alarm name cannot be longer than %zu characters.";
+ constexpr char kMaxAlarmsError[] =
+     "An extension cannot have more than %d active alarms.";
+ 
+@@ -50,6 +52,12 @@ bool ValidateAlarmCreateInfo(const std::string& alarm_name,
+     return false;
+   }
+ 
++  if (alarm_name.length() > AlarmManager::kMaxAlarmsNameLength) {
++    *error = base::StringPrintf(
++        kMaxAlarmsNameLengthError, AlarmManager::kMaxAlarmsNameLength);
++    return false;
++  }
++
+   // Users can always use an absolute timeout to request an arbitrarily-short or
+   // negative delay.  We won't honor the short timeout, but we can't check it
+   // and warn the user because it would introduce race conditions (say they

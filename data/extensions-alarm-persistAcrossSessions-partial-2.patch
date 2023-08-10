@@ -1,0 +1,480 @@
+diff --git a/chrome/browser/apps/platform_apps/app_browsertest.cc b/chrome/browser/apps/platform_apps/app_browsertest.cc
+index a1c4013457..9fd08a5df8 100644
+--- a/chrome/browser/apps/platform_apps/app_browsertest.cc
++++ b/chrome/browser/apps/platform_apps/app_browsertest.cc
+@@ -1142,7 +1142,7 @@ class CheckExtensionInstalledObserver
+   // ExtensionRegistryObserver:
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const extensions::Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override {
+     EXPECT_FALSE(seen_);
+     seen_ = true;
+diff --git a/chrome/browser/apps/platform_apps/shortcut_manager.cc b/chrome/browser/apps/platform_apps/shortcut_manager.cc
+index 8fcb906da5..5d037b9562 100644
+--- a/chrome/browser/apps/platform_apps/shortcut_manager.cc
++++ b/chrome/browser/apps/platform_apps/shortcut_manager.cc
+@@ -80,7 +80,7 @@ AppShortcutManager::~AppShortcutManager() = default;
+ void AppShortcutManager::OnExtensionWillBeInstalled(
+     content::BrowserContext* browser_context,
+     const Extension* extension,
+-    bool is_update,
++    extensions::InstallReason reason,
+     const std::string& old_name) {
+   if (!extension->is_app() || g_suppress_shortcuts_for_testing) {
+     return;
+@@ -89,7 +89,7 @@ void AppShortcutManager::OnExtensionWillBeInstalled(
+   // If the app is being updated, update any existing shortcuts but do not
+   // create new ones. If it is being installed, automatically create a
+   // shortcut in the applications menu (e.g., Start Menu).
+-  if (is_update) {
++  if (reason == extensions::INSTALL_REASON_UPDATE) {
+     web_app::UpdateAllShortcuts(base::UTF8ToUTF16(old_name), profile_,
+                                 extension, base::DoNothing());
+   } else {
+diff --git a/chrome/browser/apps/platform_apps/shortcut_manager.h b/chrome/browser/apps/platform_apps/shortcut_manager.h
+index 7d4ffab712..13e2b9539d 100644
+--- a/chrome/browser/apps/platform_apps/shortcut_manager.h
++++ b/chrome/browser/apps/platform_apps/shortcut_manager.h
+@@ -36,7 +36,7 @@ class AppShortcutManager : public KeyedService,
+   // extensions::ExtensionRegistryObserver.
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const extensions::Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override;
+   void OnExtensionUninstalled(content::BrowserContext* browser_context,
+                               const extensions::Extension* extension,
+diff --git a/chrome/browser/ash/policy/core/device_local_account_browsertest.cc b/chrome/browser/ash/policy/core/device_local_account_browsertest.cc
+index 24333450d1..59392a6e52 100644
+--- a/chrome/browser/ash/policy/core/device_local_account_browsertest.cc
++++ b/chrome/browser/ash/policy/core/device_local_account_browsertest.cc
+@@ -787,7 +787,7 @@ class ExtensionInstallObserver : public ProfileManagerObserver,
+   // extensions::ExtensionRegistryObserver:
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const extensions::Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override {
+     if (waiting_extension_id_ == extension->id()) {
+       observed_ = true;
+diff --git a/chrome/browser/extensions/api/commands/command_service.cc b/chrome/browser/extensions/api/commands/command_service.cc
+index f57c3d1897..bec31cbdd7 100644
+--- a/chrome/browser/extensions/api/commands/command_service.cc
++++ b/chrome/browser/extensions/api/commands/command_service.cc
+@@ -237,7 +237,7 @@ bool CommandService::AddKeybindingPref(
+ void CommandService::OnExtensionWillBeInstalled(
+     content::BrowserContext* browser_context,
+     const Extension* extension,
+-    bool is_update,
++    extensions::InstallReason reason,
+     const std::string& old_name) {
+   UpdateKeybindings(extension);
+ }
+diff --git a/chrome/browser/extensions/api/commands/command_service.h b/chrome/browser/extensions/api/commands/command_service.h
+index 498fda53b8..f0d4312cf2 100644
+--- a/chrome/browser/extensions/api/commands/command_service.h
++++ b/chrome/browser/extensions/api/commands/command_service.h
+@@ -191,7 +191,7 @@ class CommandService : public BrowserContextKeyedAPI,
+   // ExtensionRegistryObserver.
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override;
+   void OnExtensionUninstalled(content::BrowserContext* browser_context,
+                               const Extension* extension,
+diff --git a/chrome/browser/extensions/api/storage/managed_value_store_cache.cc b/chrome/browser/extensions/api/storage/managed_value_store_cache.cc
+index 3c2390a8ce..6be7338858 100644
+--- a/chrome/browser/extensions/api/storage/managed_value_store_cache.cc
++++ b/chrome/browser/extensions/api/storage/managed_value_store_cache.cc
+@@ -76,7 +76,7 @@ class ManagedValueStoreCache::ExtensionTracker
+   // ExtensionRegistryObserver implementation.
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override;
+   void OnExtensionUninstalled(content::BrowserContext* browser_context,
+                               const Extension* extension,
+@@ -120,7 +120,7 @@ ManagedValueStoreCache::ExtensionTracker::ExtensionTracker(
+ void ManagedValueStoreCache::ExtensionTracker::OnExtensionWillBeInstalled(
+     content::BrowserContext* browser_context,
+     const Extension* extension,
+-    bool is_update,
++    extensions::InstallReason reason,
+     const std::string& old_name) {
+   // Some extensions are installed on the first run before the ExtensionSystem
+   // becomes ready. Wait until all of them are ready before registering the
+diff --git a/chrome/browser/extensions/extension_service.cc b/chrome/browser/extensions/extension_service.cc
+index bb4de7d89a..1597124eb5 100644
+--- a/chrome/browser/extensions/extension_service.cc
++++ b/chrome/browser/extensions/extension_service.cc
+@@ -1940,7 +1940,9 @@ void ExtensionService::FinishInstallation(const Extension* extension) {
+     is_update = true;
+     old_name = existing_extension->name();
+   }
+-  registry_->TriggerOnWillBeInstalled(extension, is_update, old_name);
++  if (is_update)
++  NOTREACHED();
++  registry_->TriggerOnWillBeInstalled(extension, is_update ? extensions::INSTALL_REASON_UPDATE : extensions::INSTALL_REASON_NONE, old_name);
+ 
+   // Unpacked extensions default to allowing file access, but if that has been
+   // overridden, don't reset the value.
+diff --git a/chrome/browser/extensions/extension_service_test_with_install.cc b/chrome/browser/extensions/extension_service_test_with_install.cc
+index cb4c919bfd..e82cb65620 100644
+--- a/chrome/browser/extensions/extension_service_test_with_install.cc
++++ b/chrome/browser/extensions/extension_service_test_with_install.cc
+@@ -416,7 +416,7 @@ void ExtensionServiceTestWithInstall::OnExtensionUnloaded(
+ void ExtensionServiceTestWithInstall::OnExtensionWillBeInstalled(
+     content::BrowserContext* browser_context,
+     const Extension* extension,
+-    bool is_update,
++    extensions::InstallReason reason,
+     const std::string& old_name) {
+   installed_extension_ = extension;
+   was_update_ = is_update;
+diff --git a/chrome/browser/extensions/extension_service_test_with_install.h b/chrome/browser/extensions/extension_service_test_with_install.h
+index b9b3403f7a..2c69f2dbe3 100644
+--- a/chrome/browser/extensions/extension_service_test_with_install.h
++++ b/chrome/browser/extensions/extension_service_test_with_install.h
+@@ -156,7 +156,7 @@ class ExtensionServiceTestWithInstall : public ExtensionServiceUserTestBase,
+                            UnloadedExtensionReason reason) override;
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override;
+ 
+  private:
+diff --git a/chrome/browser/extensions/extension_service_unittest.cc b/chrome/browser/extensions/extension_service_unittest.cc
+index 256d6ad109..14153496ba 100644
+--- a/chrome/browser/extensions/extension_service_unittest.cc
++++ b/chrome/browser/extensions/extension_service_unittest.cc
+@@ -600,7 +600,7 @@ struct MockExtensionRegistryObserver : public ExtensionRegistryObserver {
+   }
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override {
+     last_extension_installed = extension->id();
+   }
+diff --git a/chrome/browser/themes/theme_service.cc b/chrome/browser/themes/theme_service.cc
+index c929aa8788..d67941b4d5 100644
+--- a/chrome/browser/themes/theme_service.cc
++++ b/chrome/browser/themes/theme_service.cc
+@@ -129,7 +129,7 @@ class ThemeService::ThemeObserver
+   // extensions::ExtensionRegistryObserver:
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const extensions::Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override {
+     if (extension->is_theme()) {
+       // Remember ID of the newly installed theme.
+diff --git a/extensions/browser/api/alarms/alarm_manager.cc b/extensions/browser/api/alarms/alarm_manager.cc
+index 48d7f83388..1afcff4ed6 100644
+--- a/extensions/browser/api/alarms/alarm_manager.cc
++++ b/extensions/browser/api/alarms/alarm_manager.cc
+@@ -71,6 +71,7 @@ base::TimeDelta TimeDeltaFromDelay(double delay_in_minutes) {
+                             base::Time::kMicrosecondsPerMinute);
+ }
+ 
++// This is called only once on browser startup
+ AlarmManager::AlarmList AlarmsFromValue(const std::string extension_id,
+                                         bool is_unpacked,
+                                         const base::Value::List& list) {
+@@ -83,6 +84,12 @@ AlarmManager::AlarmList AlarmsFromValue(const std::string extension_id,
+     Alarm alarm;
+     if (alarm_value.is_dict() &&
+         alarms::Alarm::Populate(alarm_value.GetDict(), *alarm.js_alarm)) {
++      // We do not store the non-persistent alarms to storage, but check
++      // here just to make sure
++      if (!alarm.js_alarm->persist_across_sessions) {
++        NOTREACHED();
++        continue;
++      }
+       absl::optional<base::TimeDelta> delta =
+           base::ValueToTimeDelta(alarm_value.GetDict().Find(kAlarmGranularity));
+       if (delta) {
+@@ -102,9 +109,14 @@ AlarmManager::AlarmList AlarmsFromValue(const std::string extension_id,
+   return alarms;
+ }
+ 
++// This function is used by AlarmManager::WriteToStorage which
++// does not need to save alarms not persisted across browsing sessions
+ base::Value::List AlarmsToValue(const AlarmManager::AlarmList& alarms) {
+   base::Value::List list;
+   for (const auto& item : alarms) {
++    // Skip alarms which need not to be persisted
++    if (!item.js_alarm->persist_across_sessions.value_or(true))
++      continue;
+     base::Value::Dict alarm = item.js_alarm->ToValue();
+     alarm.Set(kAlarmGranularity, base::TimeDeltaToValue(item.granularity));
+     list.Append(std::move(alarm));
+@@ -500,6 +512,9 @@ Alarm::Alarm(const std::string& name,
+ 
+   // Check for repetition.
+   js_alarm->period_in_minutes = create_info.period_in_minutes;
++
++  // Check for persistence across sessions, defaulting to true.
++  js_alarm->persist_across_sessions = create_info.persist_across_sessions.value_or(true);
+ }
+ 
+ Alarm::~Alarm() = default;
+diff --git a/extensions/browser/api/declarative_net_request/rules_monitor_service.cc b/extensions/browser/api/declarative_net_request/rules_monitor_service.cc
+index 78e278e3fc..e8f33b6038 100644
+--- a/extensions/browser/api/declarative_net_request/rules_monitor_service.cc
++++ b/extensions/browser/api/declarative_net_request/rules_monitor_service.cc
+@@ -458,12 +458,12 @@ RulesMonitorService::~RulesMonitorService() = default;
+ void RulesMonitorService::OnExtensionWillBeInstalled(
+     content::BrowserContext* browser_context,
+     const Extension* extension,
+-    bool is_update,
++    extensions::InstallReason reason,
+     const std::string& old_name) {
+   if (!HasAPIPermission(*extension))
+     return;
+ 
+-  if (!is_update || Manifest::IsUnpackedLocation(extension->location()))
++  if (reason != extensions::INSTALL_REASON_UPDATE || Manifest::IsUnpackedLocation(extension->location()))
+     return;
+ 
+   // Allow the extension to retain its pre-update allocation during the next
+diff --git a/extensions/browser/api/declarative_net_request/rules_monitor_service.h b/extensions/browser/api/declarative_net_request/rules_monitor_service.h
+index dae90c27cb..b7f57f332e 100644
+--- a/extensions/browser/api/declarative_net_request/rules_monitor_service.h
++++ b/extensions/browser/api/declarative_net_request/rules_monitor_service.h
+@@ -169,7 +169,7 @@ class RulesMonitorService : public BrowserContextKeyedAPI,
+   // ExtensionRegistryObserver implementation.
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override;
+   void OnExtensionLoaded(content::BrowserContext* browser_context,
+                          const Extension* extension) override;
+diff --git a/extensions/browser/events/lazy_event_dispatch_util.cc b/extensions/browser/events/lazy_event_dispatch_util.cc
+index 4cf5f2ec43..e85b056a75 100644
+--- a/extensions/browser/events/lazy_event_dispatch_util.cc
++++ b/extensions/browser/events/lazy_event_dispatch_util.cc
+@@ -66,7 +66,7 @@ void LazyEventDispatchUtil::OnExtensionUninstalled(
+ void LazyEventDispatchUtil::OnExtensionWillBeInstalled(
+     content::BrowserContext* browser_context,
+     const Extension* extension,
+-    bool is_update,
++    extensions::InstallReason reason,
+     const std::string& old_name) {
+   StorePendingOnInstallInfoToPref(extension);
+ }
+diff --git a/extensions/browser/events/lazy_event_dispatch_util.h b/extensions/browser/events/lazy_event_dispatch_util.h
+index ff64cb0f3c..f665617386 100644
+--- a/extensions/browser/events/lazy_event_dispatch_util.h
++++ b/extensions/browser/events/lazy_event_dispatch_util.h
+@@ -10,6 +10,7 @@
+ #include "base/scoped_observation.h"
+ #include "extensions/browser/extension_registry.h"
+ #include "extensions/browser/extension_registry_observer.h"
++#include "extensions/browser/install_reason.h"
+ #include "extensions/browser/uninstall_reason.h"
+ 
+ namespace base {
+@@ -55,7 +56,7 @@ class LazyEventDispatchUtil : public ExtensionRegistryObserver {
+                          const Extension* extension) override;
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override;
+   void OnExtensionUninstalled(content::BrowserContext* browser_context,
+                               const Extension* extension,
+diff --git a/extensions/browser/extension_registry.cc b/extensions/browser/extension_registry.cc
+index c3197eb479..b5707ebbc8 100644
+--- a/extensions/browser/extension_registry.cc
++++ b/extensions/browser/extension_registry.cc
+@@ -80,14 +80,14 @@ void ExtensionRegistry::TriggerOnUnloaded(const Extension* extension,
+ }
+ 
+ void ExtensionRegistry::TriggerOnWillBeInstalled(const Extension* extension,
+-                                                 bool is_update,
++                                                 extensions::InstallReason reason,
+                                                  const std::string& old_name) {
+   CHECK(extension);
+-  DCHECK_EQ(is_update,
++  DCHECK_EQ(reason == extensions::INSTALL_REASON_UPDATE,
+             GenerateInstalledExtensionsSet().Contains(extension->id()));
+-  DCHECK_EQ(is_update, !old_name.empty());
++  DCHECK_EQ(reason == extensions::INSTALL_REASON_UPDATE, !old_name.empty());
+   for (auto& observer : observers_)
+-    observer.OnExtensionWillBeInstalled(browser_context_, extension, is_update,
++    observer.OnExtensionWillBeInstalled(browser_context_, extension, reason,
+                                         old_name);
+ }
+ 
+diff --git a/extensions/browser/extension_registry.h b/extensions/browser/extension_registry.h
+index f4e3cdfe4c..587a59157e 100644
+--- a/extensions/browser/extension_registry.h
++++ b/extensions/browser/extension_registry.h
+@@ -13,6 +13,7 @@
+ #include "base/observer_list.h"
+ #include "base/version.h"
+ #include "components/keyed_service/core/keyed_service.h"
++#include "extensions/browser/install_reason.h"
+ #include "extensions/browser/uninstall_reason.h"
+ #include "extensions/buildflags/buildflags.h"
+ #include "extensions/common/extension_id.h"
+@@ -119,10 +120,11 @@ class ExtensionRegistry : public KeyedService {
+ 
+   // If this is a fresh install then |is_update| is false and there must not be
+   // any installed extension with |extension|'s ID. If this is an update then
+-  // |is_update| is true and must be an installed extension with |extension|'s
++  // |reason| is INSTALL_REASON_UPDATE and must be an installed extension with
++  // |extension|'s
+   // ID, and |old_name| must be non-empty.
+   void TriggerOnWillBeInstalled(const Extension* extension,
+-                                bool is_update,
++                                extensions::InstallReason reason,
+                                 const std::string& old_name);
+ 
+   // Invokes the observer method OnExtensionInstalled(). The extension must be
+diff --git a/extensions/browser/extension_registry_observer.h b/extensions/browser/extension_registry_observer.h
+index 6b9dc47364..a4c1c04e00 100644
+--- a/extensions/browser/extension_registry_observer.h
++++ b/extensions/browser/extension_registry_observer.h
+@@ -5,6 +5,7 @@
+ #ifndef EXTENSIONS_BROWSER_EXTENSION_REGISTRY_OBSERVER_H_
+ #define EXTENSIONS_BROWSER_EXTENSION_REGISTRY_OBSERVER_H_
+ 
++#include "extensions/browser/install_reason.h"
+ #include "extensions/browser/uninstall_reason.h"
+ 
+ namespace content {
+@@ -84,7 +85,7 @@ class ExtensionRegistryObserver {
+   virtual void OnExtensionWillBeInstalled(
+       content::BrowserContext* browser_context,
+       const Extension* extension,
+-      bool is_update,
++      extensions::InstallReason reason,
+       const std::string& old_name) {}
+ 
+   // Called when the installation of |extension| is complete. At this point the
+diff --git a/extensions/browser/extension_registry_unittest.cc b/extensions/browser/extension_registry_unittest.cc
+index cd87a5a7ae..d805d0c992 100644
+--- a/extensions/browser/extension_registry_unittest.cc
++++ b/extensions/browser/extension_registry_unittest.cc
+@@ -68,7 +68,7 @@ class TestObserver : public ExtensionRegistryObserver {
+ 
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override {
+     installed_.push_back(extension);
+   }
+diff --git a/extensions/browser/state_store.cc b/extensions/browser/state_store.cc
+index 5f38442715..42de7b39e1 100644
+--- a/extensions/browser/state_store.cc
++++ b/extensions/browser/state_store.cc
+@@ -166,8 +166,9 @@ bool StateStore::IsInitialized() const {
+ void StateStore::OnExtensionWillBeInstalled(
+     content::BrowserContext* browser_context,
+     const Extension* extension,
+-    bool is_update,
++    extensions::InstallReason reason,
+     const std::string& old_name) {
++      NOTREACHED();
+   RemoveKeysForExtension(extension->id());
+ }
+ 
+diff --git a/extensions/browser/state_store.h b/extensions/browser/state_store.h
+index ee46324caf..d275875423 100644
+--- a/extensions/browser/state_store.h
++++ b/extensions/browser/state_store.h
+@@ -100,7 +100,7 @@ class StateStore : public ExtensionRegistryObserver {
+                               extensions::UninstallReason reason) override;
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override;
+ 
+   // The store that holds our key/values.
+diff --git a/extensions/browser/test_extension_registry_observer.cc b/extensions/browser/test_extension_registry_observer.cc
+index 6aa6fd0c35..81a5d32b13 100644
+--- a/extensions/browser/test_extension_registry_observer.cc
++++ b/extensions/browser/test_extension_registry_observer.cc
+@@ -95,7 +95,7 @@ TestExtensionRegistryObserver::WaitForExtensionReady() {
+ void TestExtensionRegistryObserver::OnExtensionWillBeInstalled(
+     content::BrowserContext* browser_context,
+     const Extension* extension,
+-    bool is_update,
++    extensions::InstallReason reason,
+     const std::string& old_name) {
+   if (extension_id_.empty() || extension->id() == extension_id_)
+     will_be_installed_waiter_->OnObserved(extension);
+diff --git a/extensions/browser/test_extension_registry_observer.h b/extensions/browser/test_extension_registry_observer.h
+index ffb1f2b19d..f8bc5b98a9 100644
+--- a/extensions/browser/test_extension_registry_observer.h
++++ b/extensions/browser/test_extension_registry_observer.h
+@@ -44,7 +44,7 @@ class TestExtensionRegistryObserver : public ExtensionRegistryObserver {
+   // ExtensionRegistryObserver.
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override;
+   void OnExtensionInstalled(content::BrowserContext* browser_context,
+                             const Extension* extension,
+diff --git a/extensions/browser/user_script_manager.cc b/extensions/browser/user_script_manager.cc
+index 0c2f7c017e..0ee19b9a85 100644
+--- a/extensions/browser/user_script_manager.cc
++++ b/extensions/browser/user_script_manager.cc
+@@ -68,7 +68,7 @@ WebUIUserScriptLoader* UserScriptManager::GetUserScriptLoaderForWebUI(
+ void UserScriptManager::OnExtensionWillBeInstalled(
+     content::BrowserContext* browser_context,
+     const Extension* extension,
+-    bool is_update,
++    extensions::InstallReason reason,
+     const std::string& old_name) {
+   scripting::ClearPersistentScriptURLPatterns(browser_context, extension->id());
+ }
+diff --git a/extensions/browser/user_script_manager.h b/extensions/browser/user_script_manager.h
+index f8a2423619..7200b04e9a 100644
+--- a/extensions/browser/user_script_manager.h
++++ b/extensions/browser/user_script_manager.h
+@@ -53,7 +53,7 @@ class UserScriptManager : public ExtensionRegistryObserver {
+   // ExtensionRegistryObserver implementation.
+   void OnExtensionWillBeInstalled(content::BrowserContext* browser_context,
+                                   const Extension* extension,
+-                                  bool is_update,
++                                  extensions::InstallReason reason,
+                                   const std::string& old_name) override;
+   void OnExtensionLoaded(content::BrowserContext* browser_context,
+                          const Extension* extension) override;
+diff --git a/extensions/common/api/alarms.idl b/extensions/common/api/alarms.idl
+index 3f4fad1425..be67957cbf 100644
+--- a/extensions/common/api/alarms.idl
++++ b/extensions/common/api/alarms.idl
+@@ -17,6 +17,9 @@ namespace alarms {
+     // If not null, the alarm is a repeating alarm and will fire again in
+     // <var>periodInMinutes</var> minutes.
+     double? periodInMinutes;
++
++    // If false, alarm will be cleared after browsing session end
++    boolean? persistAcrossSessions;
+   };
+ 
+   // TODO(mpcomplete): rename to CreateInfo when http://crbug.com/123073 is
+@@ -38,6 +41,10 @@ namespace alarms {
+     //
+     // <!-- TODO: need minimum=0 -->
+     double? periodInMinutes;
++
++    // Whether alarm should persist across browsing sessions
++    // Defaults to true
++    boolean? persistAcrossSessions;
+   };
+ 
+   callback VoidCallback = void ();

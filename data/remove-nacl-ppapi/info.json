@@ -1,0 +1,22 @@
+[
+    {
+        "type": "git apply",
+        "path": "./remove.diff"
+    },
+    {
+        "type": "rm -rf",
+        "path": "native_client/"
+    },
+    {
+        "type": "rm -rf",
+        "path": "native_client_sdk/"
+    },
+    {
+        "type": "rm -rf",
+        "path": "components/nacl/"
+    },
+    {
+        "type": "rm -rf",
+        "path": "ppapi/"
+    }
+]

@@ -1,0 +1,39 @@
+diff --git a/chrome/BUILD.gn b/chrome/BUILD.gn
+index 61f07f7360..3a13b2fd59 100644
+--- a/chrome/BUILD.gn
++++ b/chrome/BUILD.gn
+@@ -31,6 +31,9 @@ import("//tools/v8_context_snapshot/v8_context_snapshot.gni")
+ import("//ui/gl/features.gni")
+ import("//v8/gni/v8.gni")
+ 
++assert(!enable_nacl)
++assert(!enable_ppapi)
++
+ if (is_android) {
+   import("//build/config/android/rules.gni")
+ } else if (is_linux || is_chromeos) {
+diff --git a/components/nacl/features.gni b/components/nacl/features.gni
+index 3d191569c3..0381718630 100644
+--- a/components/nacl/features.gni
++++ b/components/nacl/features.gni
+@@ -25,6 +25,7 @@ declare_args() {
+   #
+   # Intentionally and permanently disable nacl on arm64 mac.
+   enable_nacl =
++      false &&
+       checkout_nacl && _cpu_is_supported && target_os != "ios" && !is_android &&
+       !is_fuchsia && !is_castos && !(is_win && host_os != "win") &&
+       !(is_mac && (host_os != "mac" || target_cpu != "x64"))
+diff --git a/ppapi/buildflags/buildflags.gni b/ppapi/buildflags/buildflags.gni
+index 9f1cc34954..a8f1da4f31 100644
+--- a/ppapi/buildflags/buildflags.gni
++++ b/ppapi/buildflags/buildflags.gni
+@@ -16,7 +16,7 @@ declare_args() {
+ 
+ declare_args() {
+   # Enables Pepper API (PPAPI) plugin support.
+-  enable_ppapi = enable_plugins && !is_fuchsia
++  enable_ppapi = false
+ }
+ 
+ assert(enable_plugins || !enable_ppapi)

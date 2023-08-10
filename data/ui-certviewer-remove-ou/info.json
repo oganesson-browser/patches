@@ -1,0 +1,6 @@
+[
+    {
+        "type": "git apply",
+        "path": "ui-certviewer-remove-ou.patch"
+    }
+]

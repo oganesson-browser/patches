@@ -1,0 +1,277 @@
+diff --git a/extensions/browser/api/alarms/alarm_manager.cc b/extensions/browser/api/alarms/alarm_manager.cc
+index 48d7f83388..d9e8cdb760 100644
+--- a/extensions/browser/api/alarms/alarm_manager.cc
++++ b/extensions/browser/api/alarms/alarm_manager.cc
+@@ -71,6 +71,7 @@ base::TimeDelta TimeDeltaFromDelay(double delay_in_minutes) {
+                             base::Time::kMicrosecondsPerMinute);
+ }
+ 
++// This is called only once on browser startup
+ AlarmManager::AlarmList AlarmsFromValue(const std::string extension_id,
+                                         bool is_unpacked,
+                                         const base::Value::List& list) {
+@@ -83,6 +84,12 @@ AlarmManager::AlarmList AlarmsFromValue(const std::string extension_id,
+     Alarm alarm;
+     if (alarm_value.is_dict() &&
+         alarms::Alarm::Populate(alarm_value.GetDict(), *alarm.js_alarm)) {
++      // We do not store the non-persistent alarms to storage, but check
++      // here just to make sure
++      if (!alarm.js_alarm->persist_across_sessions.value_or(true)) {
++        LOG(WARNING) << "Extension had non-persistent alarms saved to storage.";
++        continue;
++      }
+       absl::optional<base::TimeDelta> delta =
+           base::ValueToTimeDelta(alarm_value.GetDict().Find(kAlarmGranularity));
+       if (delta) {
+@@ -102,9 +109,14 @@ AlarmManager::AlarmList AlarmsFromValue(const std::string extension_id,
+   return alarms;
+ }
+ 
++// This function is used by AlarmManager::WriteToStorage which
++// does not need to save alarms not persisted across browsing sessions
+ base::Value::List AlarmsToValue(const AlarmManager::AlarmList& alarms) {
+   base::Value::List list;
+   for (const auto& item : alarms) {
++    // Skip alarms which need not to be persisted
++    if (!item.js_alarm->persist_across_sessions.value_or(true))
++      continue;
+     base::Value::Dict alarm = item.js_alarm->ToValue();
+     alarm.Set(kAlarmGranularity, base::TimeDeltaToValue(item.granularity));
+     list.Append(std::move(alarm));
+@@ -168,12 +180,13 @@ void AlarmManager::RemoveAlarm(const std::string& extension_id,
+                                             name, std::move(callback)));
+ }
+ 
+-void AlarmManager::RemoveAllAlarms(const std::string& extension_id,
+-                                   RemoveAllAlarmsCallback callback) {
++void AlarmManager::RemoveAlarms(const std::string& extension_id,
++                                   bool session_only,
++                                   RemoveAlarmsCallback callback) {
+   RunWhenReady(
+       extension_id,
+-      base::BindOnce(&AlarmManager::RemoveAllAlarmsWhenReady,
+-                     weak_ptr_factory_.GetWeakPtr(), std::move(callback)));
++      base::BindOnce(&AlarmManager::RemoveAlarmsWhenReady,
++                     weak_ptr_factory_.GetWeakPtr(), session_only, std::move(callback)));
+ }
+ 
+ void AlarmManager::AddAlarmWhenReady(Alarm alarm,
+@@ -211,14 +224,22 @@ void AlarmManager::RemoveAlarmWhenReady(const std::string& name,
+   std::move(callback).Run(true);
+ }
+ 
+-void AlarmManager::RemoveAllAlarmsWhenReady(RemoveAllAlarmsCallback callback,
+-                                            const std::string& extension_id) {
++void AlarmManager::RemoveAlarmsWhenReady(bool session_only,
++                                         RemoveAlarmsCallback callback,
++                                         const std::string& extension_id) {
+   auto list = alarms_.find(extension_id);
+   if (list != alarms_.end()) {
+-    // Note: I'm using indices rather than iterators here because
+-    // RemoveAlarmIterator will delete the list when it becomes empty.
+-    for (size_t i = 0, size = list->second.size(); i < size; ++i)
+-      RemoveAlarmIterator(AlarmIterator(list, list->second.begin()));
++    if (session_only) {
++      list->second.remove_if([](Alarm alarm) {
++        return !alarm->js_alarm->persist_across_sessions.value_or(true);
++      });
++    } else {
++      auto l = list->second;
++      // Note: I'm using indices rather than iterators here because
++      // RemoveAlarmIterator will delete the list when it becomes empty.
++      for (size_t i = 0, size = list->second.size(); i < size; ++i)
++        RemoveAlarmIterator(AlarmIterator(list, list->second.begin()));
++    }
+ 
+     CHECK(alarms_.find(extension_id) == alarms_.end());
+     WriteToStorage(extension_id);
+@@ -430,7 +451,7 @@ void AlarmManager::PollAlarms() {
+   ScheduleNextPoll();
+ }
+ 
+-static void RemoveAllOnUninstallCallback() {
++static void EmptyCallback() {
+ }
+ 
+ void AlarmManager::RunWhenReady(const std::string& extension_id,
+@@ -457,12 +478,21 @@ void AlarmManager::OnExtensionLoaded(content::BrowserContext* browser_context,
+   }
+ }
+ 
++void AlarmManager::OnExtensionUnloaded(content::BrowserContext* browser_context,
++                         const Extension* extension,
++                         UnloadedExtensionReason reason) {
++  RemoveAlarms(extension->id(),
++               true,
++               base::BindOnce(RemoveAlarmsCallback));
++}
++
+ void AlarmManager::OnExtensionUninstalled(
+     content::BrowserContext* browser_context,
+     const Extension* extension,
+     extensions::UninstallReason reason) {
+-  RemoveAllAlarms(extension->id(),
+-                  base::BindOnce(RemoveAllOnUninstallCallback));
++  RemoveAlarms(extension->id(),
++               false,
++               base::BindOnce(RemoveAlarmsCallback));
+ }
+ 
+ // AlarmManager::Alarm
+@@ -500,6 +530,9 @@ Alarm::Alarm(const std::string& name,
+ 
+   // Check for repetition.
+   js_alarm->period_in_minutes = create_info.period_in_minutes;
++
++  // Check for persistence across sessions, defaulting to true.
++  js_alarm->persist_across_sessions = create_info.persist_across_sessions.value_or(true);
+ }
+ 
+ Alarm::~Alarm() = default;
+diff --git a/extensions/browser/api/alarms/alarm_manager.h b/extensions/browser/api/alarms/alarm_manager.h
+index c23f78a457..032d653091 100644
+--- a/extensions/browser/api/alarms/alarm_manager.h
++++ b/extensions/browser/api/alarms/alarm_manager.h
+@@ -123,11 +123,12 @@ class AlarmManager : public BrowserContextKeyedAPI,
+                    const std::string& name,
+                    RemoveAlarmCallback callback);
+ 
+-  using RemoveAllAlarmsCallback = base::OnceClosure;
++  using RemoveAlarmsCallback = base::OnceClosure;
+   // Cancels and removes all alarms for the given extension. Invokes |callback|
+   // when done.
+-  void RemoveAllAlarms(const std::string& extension_id,
+-                       RemoveAllAlarmsCallback callback);
++  void RemoveAlarms(const std::string& extension_id,
++                       bool session_only,
++                       RemoveAlarmsCallback callback);
+ 
+   // Replaces AlarmManager's clock with |clock|.
+   void SetClockForTesting(base::Clock* clock);
+@@ -183,9 +184,10 @@ class AlarmManager : public BrowserContextKeyedAPI,
+                             RemoveAlarmCallback callback,
+                             const std::string& extension_id);
+ 
+-  // Part of RemoveAllAlarms that is executed after alarms are loaded.
+-  void RemoveAllAlarmsWhenReady(RemoveAllAlarmsCallback callback,
+-                                const std::string& extension_id);
++  // Part of RemoveAlarms that is executed after alarms are loaded.
++  void RemoveAlarmsWhenReady(bool session_only,
++                             RemoveAlarmsCallback callback,
++                             const std::string& extension_id);
+ 
+   // Helper to return the iterators within the AlarmMap and AlarmList for the
+   // matching alarm, or an iterator to the end of the AlarmMap if none were
+@@ -228,6 +230,9 @@ class AlarmManager : public BrowserContextKeyedAPI,
+   // ExtensionRegistryObserver implementation.
+   void OnExtensionLoaded(content::BrowserContext* browser_context,
+                          const Extension* extension) override;
++  void OnExtensionUnloaded(content::BrowserContext* browser_context,
++                           const Extension* extension,
++                           extensions::UnloadedExtensionReason reason) override;
+   void OnExtensionUninstalled(content::BrowserContext* browser_context,
+                               const Extension* extension,
+                               extensions::UninstallReason reason) override;
+diff --git a/extensions/browser/api/alarms/alarms_api.cc b/extensions/browser/api/alarms/alarms_api.cc
+index 3ba71b324f..721ebb2a1f 100644
+--- a/extensions/browser/api/alarms/alarms_api.cc
++++ b/extensions/browser/api/alarms/alarms_api.cc
+@@ -199,10 +199,11 @@ void AlarmsClearFunction::Callback(const std::string& name, bool success) {
+ 
+ ExtensionFunction::ResponseAction AlarmsClearAllFunction::Run() {
+   AlarmManager::Get(browser_context())
+-      ->RemoveAllAlarms(
++      ->RemoveAlarms(
+           extension_id(),
++          false,
+           base::BindOnce(&AlarmsClearAllFunction::Callback, this));
+-  // RemoveAllAlarms might have already responded.
++  // RemoveAlarms might have already responded.
+   return did_respond() ? AlreadyResponded() : RespondLater();
+ }
+ 
+diff --git a/extensions/browser/api/alarms/alarms_api_unittest.cc b/extensions/browser/api/alarms/alarms_api_unittest.cc
+index e3c3d2cff8..3cb15ea342 100644
+--- a/extensions/browser/api/alarms/alarms_api_unittest.cc
++++ b/extensions/browser/api/alarms/alarms_api_unittest.cc
+@@ -532,8 +532,9 @@ class ExtensionAlarmsSchedulingTest : public ExtensionAlarmsTest {
+   }
+ 
+   void RemoveAllAlarms() {
+-    alarm_manager_->RemoveAllAlarms(
++    alarm_manager_->RemoveAlarms(
+         extension()->id(),
++        false,
+         base::BindOnce(
+             &ExtensionAlarmsSchedulingTest::RemoveAllAlarmsCallback));
+   }
+diff --git a/extensions/browser/state_store.cc b/extensions/browser/state_store.cc
+index 5f38442715..58d5cffbe0 100644
+--- a/extensions/browser/state_store.cc
++++ b/extensions/browser/state_store.cc
+@@ -168,14 +168,15 @@ void StateStore::OnExtensionWillBeInstalled(
+     const Extension* extension,
+     bool is_update,
+     const std::string& old_name) {
+-  RemoveKeysForExtension(extension->id());
++      //NOTREACHED();
++  RemoveKeysForExtension(extension->id(), is_update);
+ }
+ 
+ void StateStore::OnExtensionUninstalled(
+     content::BrowserContext* browser_context,
+     const Extension* extension,
+     extensions::UninstallReason reason) {
+-  RemoveKeysForExtension(extension->id());
++  RemoveKeysForExtension(extension->id(), false);
+ }
+ 
+ void StateStore::Init() {
+@@ -185,7 +186,7 @@ void StateStore::Init() {
+   task_queue_->SetReady();
+ }
+ 
+-void StateStore::RemoveKeysForExtension(const std::string& extension_id) {
++void StateStore::RemoveKeysForExtension(const std::string& extension_id, bool is_update) {
+   for (auto key = registered_keys_.begin(); key != registered_keys_.end();
+        ++key) {
+     task_queue_->InvokeWhenReady(base::BindOnce(
+diff --git a/extensions/browser/state_store.h b/extensions/browser/state_store.h
+index ee46324caf..0c59750ad4 100644
+--- a/extensions/browser/state_store.h
++++ b/extensions/browser/state_store.h
+@@ -92,7 +92,8 @@ class StateStore : public ExtensionRegistryObserver {
+   void Init();
+ 
+   // Removes all keys registered for the given extension.
+-  void RemoveKeysForExtension(const std::string& extension_id);
++  void RemoveKeysForExtension(const std::string& extension_id,
++                              bool is_update);
+ 
+   // ExtensionRegistryObserver implementation.
+   void OnExtensionUninstalled(content::BrowserContext* browser_context,
+diff --git a/extensions/common/api/alarms.idl b/extensions/common/api/alarms.idl
+index 3f4fad1425..be67957cbf 100644
+--- a/extensions/common/api/alarms.idl
++++ b/extensions/common/api/alarms.idl
+@@ -17,6 +17,9 @@ namespace alarms {
+     // If not null, the alarm is a repeating alarm and will fire again in
+     // <var>periodInMinutes</var> minutes.
+     double? periodInMinutes;
++
++    // If false, alarm will be cleared after browsing session end
++    boolean? persistAcrossSessions;
+   };
+ 
+   // TODO(mpcomplete): rename to CreateInfo when http://crbug.com/123073 is
+@@ -38,6 +41,10 @@ namespace alarms {
+     //
+     // <!-- TODO: need minimum=0 -->
+     double? periodInMinutes;
++
++    // Whether alarm should persist across browsing sessions
++    // Defaults to true
++    boolean? persistAcrossSessions;
+   };
+ 
+   callback VoidCallback = void ();

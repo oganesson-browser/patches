@@ -1,0 +1,6 @@
+[
+    {
+        "type": "git apply",
+        "path": "./ui-password-manager-export-sort.patch"
+    }
+]

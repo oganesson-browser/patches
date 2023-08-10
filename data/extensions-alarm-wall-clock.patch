@@ -1,0 +1,34 @@
+diff --git a/extensions/browser/api/alarms/alarm_manager.cc b/extensions/browser/api/alarms/alarm_manager.cc
+index 48d7f83388..c008a5a090 100644
+--- a/extensions/browser/api/alarms/alarm_manager.cc
++++ b/extensions/browser/api/alarms/alarm_manager.cc
+@@ -357,7 +357,7 @@ void AlarmManager::ReadFromStorage(const std::string& extension_id,
+ 
+ void AlarmManager::SetNextPollTime(const base::Time& time) {
+   next_poll_time_ = time;
+-  timer_.Start(FROM_HERE, std::max(base::Seconds(0), time - clock_->Now()),
++  timer_.Start(FROM_HERE, time,
+                this, &AlarmManager::PollAlarms);
+ }
+ 
+diff --git a/extensions/browser/api/alarms/alarm_manager.h b/extensions/browser/api/alarms/alarm_manager.h
+index c23f78a457..1f223f9eb7 100644
+--- a/extensions/browser/api/alarms/alarm_manager.h
++++ b/extensions/browser/api/alarms/alarm_manager.h
+@@ -19,6 +19,7 @@
+ #include "base/scoped_observation.h"
+ #include "base/time/time.h"
+ #include "base/timer/timer.h"
++#include "base/timer/wall_clock_timer.h"
+ #include "extensions/browser/browser_context_keyed_api_factory.h"
+ #include "extensions/browser/extension_registry.h"
+ #include "extensions/browser/extension_registry_observer.h"
+@@ -245,7 +246,7 @@ class AlarmManager : public BrowserContextKeyedAPI,
+       extension_registry_observation_{this};
+ 
+   // The timer for this alarm manager.
+-  base::OneShotTimer timer_;
++  base::WallClockTimer timer_;
+ 
+   // A map of our pending alarms, per extension.
+   // Invariant: None of the AlarmLists are empty.

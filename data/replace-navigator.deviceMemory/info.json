@@ -1,0 +1,6 @@
+[
+    {
+        "type": "git apply",
+        "path": "./patch.diff"
+    }
+]

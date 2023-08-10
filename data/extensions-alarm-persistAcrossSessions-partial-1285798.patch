@@ -1,0 +1,124 @@
+diff --git a/extensions/browser/api/alarms/alarm_manager.cc b/extensions/browser/api/alarms/alarm_manager.cc
+index 48d7f83388..928acfac7d 100644
+--- a/extensions/browser/api/alarms/alarm_manager.cc
++++ b/extensions/browser/api/alarms/alarm_manager.cc
+@@ -125,7 +125,7 @@ AlarmManager::AlarmManager(content::BrowserContext* context)
+ 
+   StateStore* storage = ExtensionSystem::Get(browser_context_)->state_store();
+   if (storage)
+-    storage->RegisterKey(kRegisteredAlarms);
++    storage->RegisterUpdatePersistentKey(kRegisteredAlarms);
+ }
+ 
+ AlarmManager::~AlarmManager() = default;
+diff --git a/extensions/browser/state_store.cc b/extensions/browser/state_store.cc
+index 5f38442715..4502caf92a 100644
+--- a/extensions/browser/state_store.cc
++++ b/extensions/browser/state_store.cc
+@@ -110,9 +110,15 @@ StateStore::~StateStore() {
+ }
+ 
+ void StateStore::RegisterKey(const std::string& key) {
++  DCHECK(persistent_registered_keys_.find(key) == persistent_registered_keys_.end());
+   registered_keys_.insert(key);
+ }
+ 
++void StateStore::RegisterUpdatePersistentKey(const std::string& key) {
++  DCHECK(registered_keys_.find(key) == registered_keys_.end());
++  persistent_registered_keys_.emplace(key, true);
++}
++
+ void StateStore::GetExtensionValue(const std::string& extension_id,
+                                    const std::string& key,
+                                    ReadCallback callback) {
+@@ -168,14 +174,14 @@ void StateStore::OnExtensionWillBeInstalled(
+     const Extension* extension,
+     bool is_update,
+     const std::string& old_name) {
+-  RemoveKeysForExtension(extension->id());
++  RemoveKeysForExtension(extension->id(), is_update);
+ }
+ 
+ void StateStore::OnExtensionUninstalled(
+     content::BrowserContext* browser_context,
+     const Extension* extension,
+     extensions::UninstallReason reason) {
+-  RemoveKeysForExtension(extension->id());
++  RemoveKeysForExtension(extension->id(), false);
+ }
+ 
+ void StateStore::Init() {
+@@ -185,8 +191,8 @@ void StateStore::Init() {
+   task_queue_->SetReady();
+ }
+ 
+-void StateStore::RemoveKeysForExtension(const std::string& extension_id) {
+-  for (auto key = registered_keys_.begin(); key != registered_keys_.end();
++void StateStore::ClearKeys(const std::string& extension_id, std::set<std::string> keys) {
++  for (auto key = keys.begin(); key != keys.end();
+        ++key) {
+     task_queue_->InvokeWhenReady(base::BindOnce(
+         &value_store::ValueStoreFrontend::Remove,
+@@ -194,4 +200,10 @@ void StateStore::RemoveKeysForExtension(const std::string& extension_id) {
+   }
+ }
+ 
++void StateStore::RemoveKeysForExtension(const std::string& extension_id, bool is_update) {
++  ClearKeys(extension_id, registered_keys_);
++  if (!is_update)
++    ClearKeys(extension_id, persistent_registered_keys_);
++}
++
+ }  // namespace extensions
+diff --git a/extensions/browser/state_store.h b/extensions/browser/state_store.h
+index ee46324caf..6fee9aa98a 100644
+--- a/extensions/browser/state_store.h
++++ b/extensions/browser/state_store.h
+@@ -57,10 +57,16 @@ class StateStore : public ExtensionRegistryObserver {
+ 
+   ~StateStore() override;
+ 
+-  // Register a key for removal upon extension install/uninstall. We remove
+-  // for install to reset state when an extension upgrades.
++  void ClearKeys(const std::string& extension_id, const std::set<std::string> keys);
++
++  // Register a key for removal upon extension install/uninstall and update
++  // We remove for install to reset state when an extension upgrades.
+   void RegisterKey(const std::string& key);
+ 
++  // Register a key for removal upon extension install/uninstall, but not update
++  // We remove for install to reset state when an extension upgrades.
++  void RegisterUpdatePersistentKey(const std::string& key);
++
+   // Get the value associated with the given extension and key, and pass
+   // it to |callback| asynchronously.
+   void GetExtensionValue(const std::string& extension_id,
+@@ -91,8 +97,9 @@ class StateStore : public ExtensionRegistryObserver {
+ 
+   void Init();
+ 
+-  // Removes all keys registered for the given extension.
+-  void RemoveKeysForExtension(const std::string& extension_id);
++  // Removes keys registered for the given extension, except for update-persistent ones
++  // if it is an update.
++  void RemoveKeysForExtension(const std::string& extension_id, bool is_update);
+ 
+   // ExtensionRegistryObserver implementation.
+   void OnExtensionUninstalled(content::BrowserContext* browser_context,
+@@ -106,10 +113,14 @@ class StateStore : public ExtensionRegistryObserver {
+   // The store that holds our key/values.
+   std::unique_ptr<value_store::ValueStoreFrontend> store_;
+ 
+-  // List of all known keys. They will be cleared for each extension when it is
+-  // (un)installed.
++  // List of all known keys which need to be cleared when extension is (un)installed,
++  // including when it is updated.
+   std::set<std::string> registered_keys_;
+ 
++  // List of all known keys which need to be cleared when extension is uninstalled,
++  // but not when it is updated.
++  std::set<std::string> persistent_registered_keys_;
++
+   // Keeps track of tasks we have delayed while starting up.
+   std::unique_ptr<DelayedTaskQueue> task_queue_;
+ 

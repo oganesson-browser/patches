@@ -1,0 +1,18 @@
+[
+    {
+        "type": "git apply",
+        "path": "./remove.diff"
+    },
+    {
+        "type": "rm -rf",
+        "path": "components/environment_integrity/"
+    },
+        {
+        "type": "rm -rf",
+        "path": "third_party/blink/public/mojom/environment_integrity/"
+    },
+        {
+        "type": "rm -rf",
+        "path": "third_party/blink/renderer/modules/environment_integrity/"
+    }
+]

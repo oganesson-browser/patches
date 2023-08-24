@@ -48,7 +48,15 @@ async function applyOne(src, path) {
   try {
     const infoPath = join(path, 'info.json');
     const infoStr = await readFile(infoPath, {encoding: 'utf-8'});
-    const info = JSON.parse(infoStr);
+    const info_ = JSON.parse(infoStr);
+    if (info_.skip) {
+       return;
+    }
+
+    let info = info_;
+    if (!Array.isArray(info_)) {
+        info = info_.data;
+    }
     for (const step of info) {
       await applyStep(src, path, step);
     }

@@ -1,5 +1,5 @@
 diff --git a/android_webview/browser/aw_content_browser_client_receiver_bindings.cc b/android_webview/browser/aw_content_browser_client_receiver_bindings.cc
-index b04080277e..2f5c65cdea 100644
+index b04080277e..66cc9ec702 100644
 --- a/android_webview/browser/aw_content_browser_client_receiver_bindings.cc
 +++ b/android_webview/browser/aw_content_browser_client_receiver_bindings.cc
 @@ -12,7 +12,6 @@
@@ -18,10 +18,11 @@ index b04080277e..2f5c65cdea 100644
  
  #if BUILDFLAG(ENABLE_SPELLCHECK)
  #include "components/spellcheck/browser/spell_check_host_impl.h"
-@@ -217,10 +215,6 @@ void AwContentBrowserClient::RegisterBrowserInterfaceBindersForFrame(
+@@ -216,11 +214,6 @@ void AwContentBrowserClient::RegisterBrowserInterfaceBindersForFrame(
+     mojo::BinderMapWithContext<content::RenderFrameHost*>* map) {
    map->Add<network_hints::mojom::NetworkHintsHandler>(
        base::BindRepeating(&BindNetworkHintsHandler));
- 
+-
 -  if (base::FeatureList::IsEnabled(blink::features::kWebEnvironmentIntegrity)) {
 -    map->Add<blink::mojom::EnvironmentIntegrityService>(base::BindRepeating(
 -        &environment_integrity::AndroidEnvironmentIntegrityService::Create));
@@ -30,7 +31,7 @@ index b04080277e..2f5c65cdea 100644
  
  }  // namespace android_webview
 diff --git a/chrome/browser/chrome_browser_interface_binders.cc b/chrome/browser/chrome_browser_interface_binders.cc
-index 43f4f0941a..eb12afed09 100644
+index 1cac053aa8..34279d2989 100644
 --- a/chrome/browser/chrome_browser_interface_binders.cc
 +++ b/chrome/browser/chrome_browser_interface_binders.cc
 @@ -147,10 +147,8 @@
@@ -44,7 +45,7 @@ index 43f4f0941a..eb12afed09 100644
  #include "third_party/blink/public/mojom/installedapp/installed_app_provider.mojom.h"
  #else
  #include "chrome/browser/badging/badge_manager.h"
-@@ -884,10 +882,6 @@ void PopulateChromeFrameBinders(
+@@ -892,10 +890,6 @@ void PopulateChromeFrameBinders(
    }
    map->Add<blink::mojom::ShareService>(base::BindRepeating(
        &ForwardToJavaWebContents<blink::mojom::ShareService>));
@@ -56,10 +57,10 @@ index 43f4f0941a..eb12afed09 100644
  #if BUILDFLAG(ENABLE_UNHANDLED_TAP)
    map->Add<blink::mojom::UnhandledTapNotifier>(
 diff --git a/content/browser/browser_interface_binders.cc b/content/browser/browser_interface_binders.cc
-index 7bfadf6cb3..4f5d3d9d9c 100644
+index 6a526c323e..1d4eed35e0 100644
 --- a/content/browser/browser_interface_binders.cc
 +++ b/content/browser/browser_interface_binders.cc
-@@ -125,7 +125,6 @@
+@@ -128,7 +128,6 @@
  #include "third_party/blink/public/mojom/cookie_store/cookie_store.mojom.h"
  #include "third_party/blink/public/mojom/credentialmanagement/credential_manager.mojom.h"
  #include "third_party/blink/public/mojom/device/device.mojom.h"
@@ -67,7 +68,7 @@ index 7bfadf6cb3..4f5d3d9d9c 100644
  #include "third_party/blink/public/mojom/feature_observer/feature_observer.mojom.h"
  #include "third_party/blink/public/mojom/file/file_utilities.mojom.h"
  #include "third_party/blink/public/mojom/file_system_access/file_system_access_manager.mojom.h"
-@@ -1144,10 +1143,6 @@ void PopulateBinderMapWithContext(
+@@ -1138,10 +1137,6 @@ void PopulateBinderMapWithContext(
      map->Add<blink::mojom::BrowsingTopicsDocumentService>(
          base::BindRepeating(&BrowsingTopicsDocumentHost::CreateMojoService));
    }
@@ -75,14 +76,14 @@ index 7bfadf6cb3..4f5d3d9d9c 100644
 -    map->Add<blink::mojom::EnvironmentIntegrityService>(base::BindRepeating(
 -        &EmptyBinderForFrame<blink::mojom::EnvironmentIntegrityService>));
 -  }
- #if !BUILDFLAG(IS_ANDROID)
-   map->Add<blink::mojom::DirectSocketsService>(
-       base::BindRepeating(&DirectSocketsServiceImpl::CreateForFrame));
+   if (base::FeatureList::IsEnabled(
+           net::features::kCookieDeprecationFacilitatedTestingLabels)) {
+     map->Add<blink::mojom::CookieDeprecationLabelDocumentService>(
 diff --git a/third_party/blink/public/mojom/BUILD.gn b/third_party/blink/public/mojom/BUILD.gn
-index ac92e073b9..9ca6997363 100644
+index 31d5a8ef75..5bb7399996 100644
 --- a/third_party/blink/public/mojom/BUILD.gn
 +++ b/third_party/blink/public/mojom/BUILD.gn
-@@ -65,7 +65,6 @@ mojom("mojom_platform") {
+@@ -66,7 +66,6 @@ mojom("mojom_platform") {
      "dom_storage/session_storage_namespace.mojom",
      "dom_storage/storage_area.mojom",
      "drag/drag.mojom",
@@ -91,23 +92,23 @@ index ac92e073b9..9ca6997363 100644
      "feature_observer/feature_observer.mojom",
      "fenced_frame/fenced_frame_config.mojom",
 diff --git a/third_party/blink/renderer/bindings/generated_in_modules.gni b/third_party/blink/renderer/bindings/generated_in_modules.gni
-index 8b1d5f7c5c..672d1d1ce1 100644
+index d5445b96d5..12c0a24424 100644
 --- a/third_party/blink/renderer/bindings/generated_in_modules.gni
 +++ b/third_party/blink/renderer/bindings/generated_in_modules.gni
-@@ -1903,8 +1903,6 @@ generated_interface_sources_in_modules = [
-   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_encoded_audio_chunk.h",
-   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_encoded_video_chunk.cc",
-   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_encoded_video_chunk.h",
--  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_environment_integrity.cc",
--  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_environment_integrity.h",
-   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_entry.cc",
+@@ -1923,8 +1923,6 @@ generated_interface_sources_in_modules = [
    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_entry.h",
    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_entry_sync.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_entry_sync.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_environment_integrity.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_environment_integrity.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_event_source.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_event_source.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ext_blend_func_extended.cc",
 diff --git a/third_party/blink/renderer/bindings/idl_in_modules.gni b/third_party/blink/renderer/bindings/idl_in_modules.gni
-index 2f0071ec80..e1c1f794c8 100644
+index 614e7a84d8..b6d6192b1d 100644
 --- a/third_party/blink/renderer/bindings/idl_in_modules.gni
 +++ b/third_party/blink/renderer/bindings/idl_in_modules.gni
-@@ -241,8 +241,6 @@ static_idl_files_in_modules = [
+@@ -243,8 +243,6 @@ static_idl_files_in_modules = [
    "//third_party/blink/renderer/modules/encryptedmedia/media_keys_get_status_for_policy.idl",
    "//third_party/blink/renderer/modules/encryptedmedia/media_keys_policy.idl",
    "//third_party/blink/renderer/modules/encryptedmedia/navigator_request_media_key_system_access.idl",
@@ -117,7 +118,7 @@ index 2f0071ec80..e1c1f794c8 100644
    "//third_party/blink/renderer/modules/eventsource/event_source_init.idl",
    "//third_party/blink/renderer/modules/eyedropper/color_selection_options.idl",
 diff --git a/third_party/blink/renderer/modules/BUILD.gn b/third_party/blink/renderer/modules/BUILD.gn
-index f586c6f417..c33d38e520 100644
+index 55b20f0065..fce0354840 100644
 --- a/third_party/blink/renderer/modules/BUILD.gn
 +++ b/third_party/blink/renderer/modules/BUILD.gn
 @@ -90,7 +90,6 @@ component("modules") {

@@ -129,3 +129,25 @@ index 55b20f0065..fce0354840 100644
      "//third_party/blink/renderer/modules/eventsource",
      "//third_party/blink/renderer/modules/exported",
      "//third_party/blink/renderer/modules/eyedropper",
+diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
+index b135172e00..3d34d0931b 100644
+--- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
++++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
+@@ -4131,17 +4131,6 @@
+       status: "experimental",
+       base_feature: "none",
+     },
+-    {
+-      name: "WebEnvironmentIntegrity",
+-      status: "experimental",
+-      origin_trial_feature_name: "WebEnvironmentIntegrity",
+-      // base_feature is meant as kill-switch. The RuntimeFeature should follow
+-      // the `status` field or Origin Trial unless explicitly overriden by
+-      // Finch / command line flags.
+-      base_feature_status: "enabled",
+-      copied_from_base_feature_if: "overridden",
+-      origin_trial_allows_third_party: true,
+-    },
+     {
+       name: "WebFontResizeLCP",
+       status: "experimental",

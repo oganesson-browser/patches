@@ -1,4 +1,7 @@
 
+content/browser/interest_group
+content/browser/aggregation_service
+
 # List changed files
 
 git diff --name-only

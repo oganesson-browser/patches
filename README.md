@@ -16,3 +16,6 @@ components/metrics
 # Test failures
 
 out/Small/unit_tests --gtest_filter="TestChromeColorsService*"
+
+
+third_party/blink/renderer/platform/runtime_enabled_features.json5

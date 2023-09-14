@@ -92,10 +92,10 @@ index 31d5a8ef75..5bb7399996 100644
      "feature_observer/feature_observer.mojom",
      "fenced_frame/fenced_frame_config.mojom",
 diff --git a/third_party/blink/renderer/bindings/generated_in_modules.gni b/third_party/blink/renderer/bindings/generated_in_modules.gni
-index d5445b96d5..12c0a24424 100644
+index c0516b1cec..75f56072a3 100644
 --- a/third_party/blink/renderer/bindings/generated_in_modules.gni
 +++ b/third_party/blink/renderer/bindings/generated_in_modules.gni
-@@ -1923,8 +1923,6 @@ generated_interface_sources_in_modules = [
+@@ -1921,8 +1921,6 @@ generated_interface_sources_in_modules = [
    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_entry.h",
    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_entry_sync.cc",
    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_entry_sync.h",
@@ -105,7 +105,7 @@ index d5445b96d5..12c0a24424 100644
    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_event_source.h",
    "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ext_blend_func_extended.cc",
 diff --git a/third_party/blink/renderer/bindings/idl_in_modules.gni b/third_party/blink/renderer/bindings/idl_in_modules.gni
-index 614e7a84d8..b6d6192b1d 100644
+index 9388e0e761..7128a0b76f 100644
 --- a/third_party/blink/renderer/bindings/idl_in_modules.gni
 +++ b/third_party/blink/renderer/bindings/idl_in_modules.gni
 @@ -243,8 +243,6 @@ static_idl_files_in_modules = [
@@ -117,6 +117,19 @@ index 614e7a84d8..b6d6192b1d 100644
    "//third_party/blink/renderer/modules/eventsource/event_source.idl",
    "//third_party/blink/renderer/modules/eventsource/event_source_init.idl",
    "//third_party/blink/renderer/modules/eyedropper/color_selection_options.idl",
+diff --git a/third_party/blink/renderer/core/origin_trials/origin_trial_context.cc b/third_party/blink/renderer/core/origin_trials/origin_trial_context.cc
+index d35dffa051..dcba4b1b9e 100644
+--- a/third_party/blink/renderer/core/origin_trials/origin_trial_context.cc
++++ b/third_party/blink/renderer/core/origin_trials/origin_trial_context.cc
+@@ -551,7 +551,7 @@ bool OriginTrialContext::CanEnableTrialFromName(const StringView& trial_name) {
+   }
+ 
+   if (trial_name == "WebEnvironmentIntegrity") {
+-    return base::FeatureList::IsEnabled(features::kWebEnvironmentIntegrity);
++    return false;
+   }
+ 
+   return true;
 diff --git a/third_party/blink/renderer/modules/BUILD.gn b/third_party/blink/renderer/modules/BUILD.gn
 index 55b20f0065..fce0354840 100644
 --- a/third_party/blink/renderer/modules/BUILD.gn
@@ -130,10 +143,10 @@ index 55b20f0065..fce0354840 100644
      "//third_party/blink/renderer/modules/exported",
      "//third_party/blink/renderer/modules/eyedropper",
 diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-index b135172e00..3d34d0931b 100644
+index 5ac06a463a..3a4ab3b18a 100644
 --- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
 +++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
-@@ -4131,17 +4131,6 @@
+@@ -4132,17 +4132,6 @@
        status: "experimental",
        base_feature: "none",
      },

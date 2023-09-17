@@ -1,5 +1,7 @@
 {
-    "feature": "WebEnvironmentIntegrity",
+    "feature": {
+        "origin_trial_feature_name": "PrivacySandboxAdsAPIs"
+    }
     "skip": true,
     "data": [
         {

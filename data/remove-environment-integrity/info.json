@@ -1,5 +1,7 @@
 {
-    "feature": "WebEnvironmentIntegrity",
+    "feature": {
+        "name": "WebEnvironmentIntegrity"
+    },
     "skip": false,
     "data": [
         {

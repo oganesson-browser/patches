@@ -1,6 +1,12 @@
+{
+"diff": {
+    "context": 0
+},
+"data":
 [
     {
         "type": "git apply",
         "path": "ui-certviewer-remove-ou.patch"
     }
 ]
+}

@@ -2,142 +2,74 @@ diff --git a/chrome/browser/resources/certificate_viewer/certificate_viewer.html
 index 8967eee8d70..c625d9c2d06 100644
 --- a/chrome/browser/resources/certificate_viewer/certificate_viewer.html
 +++ b/chrome/browser/resources/certificate_viewer/certificate_viewer.html
-@@ -37,10 +37,6 @@
-             <div class="attribute">$i18n{o}</div>
-             <div id="issued-o" class="value"></div>
-           </div>
+@@ -40,4 +39,0 @@
 -          <div>
 -            <div class="attribute">$i18n{ou}</div>
 -            <div id="issued-ou" class="value"></div>
 -          </div>
- 
-           <!-- Issued by -->
-           <div>
-@@ -54,10 +50,6 @@
-             <div class="attribute">$i18n{o}</div>
-             <div id="issuer-o" class="value"></div>
-           </div>
+@@ -57,4 +52,0 @@
 -          <div>
 -            <div class="attribute">$i18n{ou}</div>
 -            <div id="issuer-ou" class="value"></div>
 -          </div>
- 
-           <!-- Validity -->
-           <div>
 diff --git a/chrome/browser/ui/webui/certificate_viewer_ui.cc b/chrome/browser/ui/webui/certificate_viewer_ui.cc
 index ed8fad1b17a..b88b5282027 100644
 --- a/chrome/browser/ui/webui/certificate_viewer_ui.cc
 +++ b/chrome/browser/ui/webui/certificate_viewer_ui.cc
-@@ -35,7 +35,6 @@ void CreateAndAddWebUIDataSource(Profile* profile, const std::string& host) {
-       {"issuedBy", IDS_CERT_INFO_ISSUER_GROUP},
-       {"cn", IDS_CERT_INFO_COMMON_NAME_LABEL},
-       {"o", IDS_CERT_INFO_ORGANIZATION_LABEL},
+@@ -38 +37,0 @@ void CreateAndAddWebUIDataSource(Profile* profile, const std::string& host) {
 -      {"ou", IDS_CERT_INFO_ORGANIZATIONAL_UNIT_LABEL},
-       {"validity", IDS_CERT_INFO_VALIDITY_GROUP},
-       {"issuedOn", IDS_CERT_INFO_ISSUED_ON_LABEL},
-       {"expiresOn", IDS_CERT_INFO_EXPIRES_ON_LABEL},
 diff --git a/chrome/browser/ui/webui/certificate_viewer_webui.cc b/chrome/browser/ui/webui/certificate_viewer_webui.cc
 index f899a8fecce..e1143beea1c 100644
 --- a/chrome/browser/ui/webui/certificate_viewer_webui.cc
 +++ b/chrome/browser/ui/webui/certificate_viewer_webui.cc
-@@ -276,9 +276,6 @@ std::string CertificateViewerDialog::GetDialogArgs() const {
-         HandleOptionalOrError(model.GetSubjectCommonName()));
-     cert_info.SetByDottedPath("general.issued-o",
-                               HandleOptionalOrError(model.GetSubjectOrgName()));
+@@ -279,3 +278,0 @@ std::string CertificateViewerDialog::GetDialogArgs() const {
 -    cert_info.SetByDottedPath(
 -        "general.issued-ou",
 -        HandleOptionalOrError(model.GetSubjectOrgUnitName()));
- 
-     // Issuer information.
-     cert_info.SetByDottedPath(
-@@ -286,9 +283,6 @@ std::string CertificateViewerDialog::GetDialogArgs() const {
-         HandleOptionalOrError(model.GetIssuerCommonName()));
-     cert_info.SetByDottedPath("general.issuer-o",
-                               HandleOptionalOrError(model.GetIssuerOrgName()));
+@@ -289,3 +285,0 @@ std::string CertificateViewerDialog::GetDialogArgs() const {
 -    cert_info.SetByDottedPath(
 -        "general.issuer-ou",
 -        HandleOptionalOrError(model.GetIssuerOrgUnitName()));
- 
-     // Validity period.
-     base::Time issued, expires;
 diff --git a/components/certificate_matching/certificate_principal_pattern.cc b/components/certificate_matching/certificate_principal_pattern.cc
 index 8b52046ff8e..35e884f0c44 100644
 --- a/components/certificate_matching/certificate_principal_pattern.cc
 +++ b/components/certificate_matching/certificate_principal_pattern.cc
-@@ -85,6 +85,7 @@ CertificatePrincipalPattern CertificatePrincipalPattern::ParseFromOptionalDict(
-     base::StringPiece key_common_name,
-     base::StringPiece key_locality,
-     base::StringPiece key_organization,
+@@ -87,0 +88 @@ CertificatePrincipalPattern CertificatePrincipalPattern::ParseFromOptionalDict(
 +      // TOOD: remove OU here?
-     base::StringPiece key_organization_unit) {
-   if (!dict)
-     return CertificatePrincipalPattern();
 diff --git a/components/page_info/android/certificate_viewer_android.cc b/components/page_info/android/certificate_viewer_android.cc
 index a368a5f3de6..b338598403d 100644
 --- a/components/page_info/android/certificate_viewer_android.cc
 +++ b/components/page_info/android/certificate_viewer_android.cc
-@@ -35,12 +35,6 @@ JNI_CertificateViewer_GetCertInfoSerialNumberText(JNIEnv* env) {
-       env, l10n_util::GetStringUTF8(IDS_CERT_INFO_SERIAL_NUMBER_LABEL));
- }
- 
+@@ -38,6 +37,0 @@ JNI_CertificateViewer_GetCertInfoSerialNumberText(JNIEnv* env) {
 -static ScopedJavaLocalRef<jstring>
 -JNI_CertificateViewer_GetCertInfoOrganizationUnitText(JNIEnv* env) {
 -  return ConvertUTF8ToJavaString(
 -      env, l10n_util::GetStringUTF8(IDS_CERT_INFO_ORGANIZATIONAL_UNIT_LABEL));
 -}
 -
- static ScopedJavaLocalRef<jstring> JNI_CertificateViewer_GetCertIssuedByText(
-     JNIEnv* env) {
-   return ConvertUTF8ToJavaString(
 diff --git a/components/page_info/android/java/src/org/chromium/components/page_info/CertificateViewer.java b/components/page_info/android/java/src/org/chromium/components/page_info/CertificateViewer.java
 index e74f285eeb0..0441617b553 100644
 --- a/components/page_info/android/java/src/org/chromium/components/page_info/CertificateViewer.java
 +++ b/components/page_info/android/java/src/org/chromium/components/page_info/CertificateViewer.java
-@@ -159,8 +159,6 @@ public class CertificateViewer implements OnItemSelectedListener {
-                 sslCert.getIssuedTo().getCName());
-         addItem(certificateView, CertificateViewerJni.get().getCertInfoOrganizationText(),
-                 sslCert.getIssuedTo().getOName());
+@@ -162,2 +161,0 @@ public class CertificateViewer implements OnItemSelectedListener {
 -        addItem(certificateView, CertificateViewerJni.get().getCertInfoOrganizationUnitText(),
 -                sslCert.getIssuedTo().getUName());
-         addItem(certificateView, CertificateViewerJni.get().getCertInfoSerialNumberText(),
-                 formatBytes(x509.getSerialNumber().toByteArray(), ':'));
- 
-@@ -169,8 +167,6 @@ public class CertificateViewer implements OnItemSelectedListener {
-                 sslCert.getIssuedBy().getCName());
-         addItem(certificateView, CertificateViewerJni.get().getCertInfoOrganizationText(),
-                 sslCert.getIssuedBy().getOName());
+@@ -172,2 +169,0 @@ public class CertificateViewer implements OnItemSelectedListener {
 -        addItem(certificateView, CertificateViewerJni.get().getCertInfoOrganizationUnitText(),
 -                sslCert.getIssuedBy().getUName());
- 
-         addSectionTitle(certificateView, CertificateViewerJni.get().getCertValidityText());
-         DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.MEDIUM);
-@@ -288,7 +284,6 @@ public class CertificateViewer implements OnItemSelectedListener {
-         String getCertInfoCommonNameText();
-         String getCertInfoOrganizationText();
-         String getCertInfoSerialNumberText();
+@@ -291 +286,0 @@ public class CertificateViewer implements OnItemSelectedListener {
 -        String getCertInfoOrganizationUnitText();
-         String getCertIssuedByText();
-         String getCertValidityText();
-         String getCertIssuedOnText();
 diff --git a/components/page_info_strings.grdp b/components/page_info_strings.grdp
 index bce866203da..b0f7cfe92e5 100644
 --- a/components/page_info_strings.grdp
 +++ b/components/page_info_strings.grdp
-@@ -636,9 +636,6 @@
-   <message name="IDS_CERT_INFO_ORGANIZATION_LABEL" desc="The label of the Organization field in the general page of the certificate info dialog.  (O) is the name of this field in the standard">
-     Organization (O)
-   </message>
+@@ -639,3 +638,0 @@
 -  <message name="IDS_CERT_INFO_ORGANIZATIONAL_UNIT_LABEL" desc="The label of the Organizational Unit field in the general page of the certificate info dialog.  (OU) is the name of this field in the standard">
 -    Organizational Unit (OU)
 -  </message>
-   <message name="IDS_CERT_INFO_SERIAL_NUMBER_LABEL" desc="The label of the Serial Number field in the general page of the certificate info dialog.">
-     Serial Number
-   </message>
 diff --git a/weblayer/grit_strings_allowlist.txt b/weblayer/grit_strings_allowlist.txt
 index 5c338e1836f..b8faf800cfc 100644
 --- a/weblayer/grit_strings_allowlist.txt
 +++ b/weblayer/grit_strings_allowlist.txt
-@@ -78,3 +78,2 @@ IDS_CERT_INFO_ISSUED_ON_LABEL
- IDS_CERT_INFO_ISSUER_GROUP
+@@ -79 +78,0 @@ IDS_CERT_INFO_ISSUER_GROUP
 -IDS_CERT_INFO_ORGANIZATIONAL_UNIT_LABEL
- IDS_CERT_INFO_ORGANIZATION_LABEL

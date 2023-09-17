@@ -1,5 +1,5 @@
 diff --git a/chrome/browser/resources/certificate_viewer/certificate_viewer.html b/chrome/browser/resources/certificate_viewer/certificate_viewer.html
-index a0c8b8c7a4..505c3707b9 100644
+index 8967eee8d70..c625d9c2d06 100644
 --- a/chrome/browser/resources/certificate_viewer/certificate_viewer.html
 +++ b/chrome/browser/resources/certificate_viewer/certificate_viewer.html
 @@ -37,10 +37,6 @@
@@ -25,7 +25,7 @@ index a0c8b8c7a4..505c3707b9 100644
            <!-- Validity -->
            <div>
 diff --git a/chrome/browser/ui/webui/certificate_viewer_ui.cc b/chrome/browser/ui/webui/certificate_viewer_ui.cc
-index c5e5ab1348..0c506246ff 100644
+index ed8fad1b17a..b88b5282027 100644
 --- a/chrome/browser/ui/webui/certificate_viewer_ui.cc
 +++ b/chrome/browser/ui/webui/certificate_viewer_ui.cc
 @@ -35,7 +35,6 @@ void CreateAndAddWebUIDataSource(Profile* profile, const std::string& host) {
@@ -37,7 +37,7 @@ index c5e5ab1348..0c506246ff 100644
        {"issuedOn", IDS_CERT_INFO_ISSUED_ON_LABEL},
        {"expiresOn", IDS_CERT_INFO_EXPIRES_ON_LABEL},
 diff --git a/chrome/browser/ui/webui/certificate_viewer_webui.cc b/chrome/browser/ui/webui/certificate_viewer_webui.cc
-index 4509878722..06a111c477 100644
+index f899a8fecce..e1143beea1c 100644
 --- a/chrome/browser/ui/webui/certificate_viewer_webui.cc
 +++ b/chrome/browser/ui/webui/certificate_viewer_webui.cc
 @@ -276,9 +276,6 @@ std::string CertificateViewerDialog::GetDialogArgs() const {
@@ -61,7 +61,7 @@ index 4509878722..06a111c477 100644
      // Validity period.
      base::Time issued, expires;
 diff --git a/components/certificate_matching/certificate_principal_pattern.cc b/components/certificate_matching/certificate_principal_pattern.cc
-index 8b52046ff8..35e884f0c4 100644
+index 8b52046ff8e..35e884f0c44 100644
 --- a/components/certificate_matching/certificate_principal_pattern.cc
 +++ b/components/certificate_matching/certificate_principal_pattern.cc
 @@ -85,6 +85,7 @@ CertificatePrincipalPattern CertificatePrincipalPattern::ParseFromOptionalDict(
@@ -73,7 +73,7 @@ index 8b52046ff8..35e884f0c4 100644
    if (!dict)
      return CertificatePrincipalPattern();
 diff --git a/components/page_info/android/certificate_viewer_android.cc b/components/page_info/android/certificate_viewer_android.cc
-index bb9d8d5fca..a1dd8266d7 100644
+index a368a5f3de6..b338598403d 100644
 --- a/components/page_info/android/certificate_viewer_android.cc
 +++ b/components/page_info/android/certificate_viewer_android.cc
 @@ -35,12 +35,6 @@ JNI_CertificateViewer_GetCertInfoSerialNumberText(JNIEnv* env) {
@@ -90,7 +90,7 @@ index bb9d8d5fca..a1dd8266d7 100644
      JNIEnv* env) {
    return ConvertUTF8ToJavaString(
 diff --git a/components/page_info/android/java/src/org/chromium/components/page_info/CertificateViewer.java b/components/page_info/android/java/src/org/chromium/components/page_info/CertificateViewer.java
-index 965f342991..df903c2dc7 100644
+index e74f285eeb0..0441617b553 100644
 --- a/components/page_info/android/java/src/org/chromium/components/page_info/CertificateViewer.java
 +++ b/components/page_info/android/java/src/org/chromium/components/page_info/CertificateViewer.java
 @@ -159,8 +159,6 @@ public class CertificateViewer implements OnItemSelectedListener {
@@ -120,10 +120,10 @@ index 965f342991..df903c2dc7 100644
          String getCertValidityText();
          String getCertIssuedOnText();
 diff --git a/components/page_info_strings.grdp b/components/page_info_strings.grdp
-index eb551bd1c8..21417d9956 100644
+index bce866203da..b0f7cfe92e5 100644
 --- a/components/page_info_strings.grdp
 +++ b/components/page_info_strings.grdp
-@@ -615,9 +615,6 @@
+@@ -636,9 +636,6 @@
    <message name="IDS_CERT_INFO_ORGANIZATION_LABEL" desc="The label of the Organization field in the general page of the certificate info dialog.  (O) is the name of this field in the standard">
      Organization (O)
    </message>
@@ -134,7 +134,7 @@ index eb551bd1c8..21417d9956 100644
      Serial Number
    </message>
 diff --git a/weblayer/grit_strings_allowlist.txt b/weblayer/grit_strings_allowlist.txt
-index c1f037cc64..be4478f316 100644
+index 5c338e1836f..b8faf800cfc 100644
 --- a/weblayer/grit_strings_allowlist.txt
 +++ b/weblayer/grit_strings_allowlist.txt
 @@ -76,7 +76,6 @@ IDS_CERT_INFO_EXPIRES_ON_LABEL
@@ -144,4 +144,4 @@ index c1f037cc64..be4478f316 100644
 -IDS_CERT_INFO_ORGANIZATIONAL_UNIT_LABEL
  IDS_CERT_INFO_ORGANIZATION_LABEL
  IDS_CERT_INFO_SERIAL_NUMBER_LABEL
- IDS_CERT_INFO_SHA1_FINGERPRINT_LABEL
+ IDS_CERT_INFO_SHA256_SPKI_FINGERPRINT_LABEL

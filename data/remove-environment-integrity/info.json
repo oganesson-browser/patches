@@ -1,6 +1,6 @@
 {
     "feature": "WebEnvironmentIntegrity",
-    "skip": true,
+    "skip": false,
     "data": [
         {
             "type": "git apply",

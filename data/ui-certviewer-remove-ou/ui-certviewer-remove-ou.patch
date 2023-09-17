@@ -137,11 +137,7 @@ diff --git a/weblayer/grit_strings_allowlist.txt b/weblayer/grit_strings_allowli
 index 5c338e1836f..b8faf800cfc 100644
 --- a/weblayer/grit_strings_allowlist.txt
 +++ b/weblayer/grit_strings_allowlist.txt
-@@ -76,7 +76,6 @@ IDS_CERT_INFO_EXPIRES_ON_LABEL
- IDS_CERT_INFO_FINGERPRINTS_GROUP
- IDS_CERT_INFO_ISSUED_ON_LABEL
+@@ -78,3 +78,2 @@ IDS_CERT_INFO_ISSUED_ON_LABEL
  IDS_CERT_INFO_ISSUER_GROUP
 -IDS_CERT_INFO_ORGANIZATIONAL_UNIT_LABEL
  IDS_CERT_INFO_ORGANIZATION_LABEL
- IDS_CERT_INFO_SERIAL_NUMBER_LABEL
- IDS_CERT_INFO_SHA256_SPKI_FINGERPRINT_LABEL

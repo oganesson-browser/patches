@@ -1,0 +1,1544 @@
+diff --git a/chrome/renderer/chrome_content_renderer_client.cc b/chrome/renderer/chrome_content_renderer_client.cc
+index 8ef09f60649..584e689b8cc 100644
+--- a/chrome/renderer/chrome_content_renderer_client.cc
++++ b/chrome/renderer/chrome_content_renderer_client.cc
+@@ -675,6 +675,7 @@ void ChromeContentRendererClient::RenderFrameCreated(
+   blink::AssociatedInterfaceRegistry* associated_interfaces =
+       render_frame_observer->associated_interfaces();
+ 
++  /*
+   if (!render_frame->IsInFencedFrameTree() ||
+       base::FeatureList::IsEnabled(blink::features::kFencedFramesAPIChanges)) {
+     PasswordAutofillAgent* password_autofill_agent =
+@@ -685,6 +686,7 @@ void ChromeContentRendererClient::RenderFrameCreated(
+     new AutofillAgent(render_frame, password_autofill_agent,
+                       password_generation_agent, associated_interfaces);
+   }
++  */
+ 
+   if (content_capture::features::IsContentCaptureEnabled()) {
+     new content_capture::ContentCaptureSender(render_frame,
+diff --git a/components/autofill/content/browser/content_autofill_driver_factory.cc b/components/autofill/content/browser/content_autofill_driver_factory.cc
+index 5603359e758..37796cd28b5 100644
+--- a/components/autofill/content/browser/content_autofill_driver_factory.cc
++++ b/components/autofill/content/browser/content_autofill_driver_factory.cc
+@@ -108,10 +108,12 @@ ContentAutofillDriver* ContentAutofillDriverFactory::DriverForFrame(
+     content::RenderFrameHost* render_frame_host) {
+   // Within fenced frames and their descendants, Password Manager should for now
+   // be disabled (crbug.com/1294378).
++  /*
+   if (render_frame_host->IsNestedWithinFencedFrame() &&
+       !base::FeatureList::IsEnabled(blink::features::kFencedFramesAPIChanges)) {
+     return nullptr;
+   }
++  */
+ 
+   auto [iter, insertion_happened] =
+       driver_map_.emplace(render_frame_host, nullptr);
+diff --git a/components/browsing_data/content/browsing_data_model.cc b/components/browsing_data/content/browsing_data_model.cc
+index bac9b3e370f..268cffce6a5 100644
+--- a/components/browsing_data/content/browsing_data_model.cc
++++ b/components/browsing_data/content/browsing_data_model.cc
+@@ -21,7 +21,6 @@
+ #include "components/browsing_data/content/shared_worker_info.h"
+ #include "components/browsing_data/core/features.h"
+ #include "components/services/storage/public/mojom/storage_usage_info.mojom.h"
+-#include "components/services/storage/shared_storage/shared_storage_manager.h"
+ #include "content/public/browser/browser_context.h"
+ #include "content/public/browser/browser_thread.h"
+ #include "content/public/browser/dom_storage_context.h"
+@@ -50,9 +49,6 @@ namespace {
+ // imperceptible, but non-0 amount of space, such as Trust Tokens.
+ constexpr int kSmallAmountOfDataInBytes = 100;
+ 
+-// An estimate of storage size of an Interest Group object.
+-constexpr int kModerateAmountOfDataInBytes = 1024;
+-
+ // Visitor which returns the appropriate data owner for a given `data_key`
+ // and `storage_type`.
+ struct GetDataOwner {
+@@ -111,7 +107,6 @@ GetDataOwner::GetOwningOriginOrHost<blink::StorageKey>(
+   // coexist.
+   switch (storage_type_) {
+     case BrowsingDataModel::StorageType::kQuotaStorage:
+-    case BrowsingDataModel::StorageType::kSharedStorage:
+     case BrowsingDataModel::StorageType::kLocalStorage:
+       return GetOwnerBasedOnScheme(data_key.origin());
+     default:
+@@ -257,6 +252,7 @@ void StorageRemoverHelper::Visitor::operator()<url::Origin>(
+ template <>
+ void StorageRemoverHelper::Visitor::operator()<blink::StorageKey>(
+     const blink::StorageKey& storage_key) {
++  /*
+   if (types.Has(BrowsingDataModel::StorageType::kSharedStorage)) {
+     helper->storage_partition_->GetSharedStorageManager()->Clear(
+         storage_key.origin(),
+@@ -267,6 +263,7 @@ void StorageRemoverHelper::Visitor::operator()<blink::StorageKey>(
+             },
+             helper->GetCompleteCallback()));
+   }
++  */
+ 
+   if (types.Has(BrowsingDataModel::StorageType::kQuotaStorage)) {
+     const blink::mojom::StorageType quota_types[] = {
+@@ -401,6 +398,7 @@ void OnTrustTokenIssuanceInfoLoaded(
+   std::move(loaded_callback).Run();
+ }
+ 
++/*
+ void OnSharedStorageLoaded(
+     BrowsingDataModel* model,
+     base::OnceClosure loaded_callback,
+@@ -451,6 +449,7 @@ void OnPrivateAggregationLoaded(
+   }
+   std::move(loaded_callback).Run();
+ }
++*/
+ 
+ void OnQuotaStorageLoaded(
+     BrowsingDataModel* model,
+@@ -783,16 +782,8 @@ bool BrowsingDataModel::IsBlockedByThirdPartyCookieBlocking(
+ 
+ void BrowsingDataModel::PopulateFromDisk(base::OnceClosure finished_callback) {
+   DCHECK_CURRENTLY_ON(content::BrowserThread::UI);
+-  bool is_shared_storage_enabled =
+-      base::FeatureList::IsEnabled(blink::features::kSharedStorageAPI);
+   bool is_shared_dictionary_enabled = base::FeatureList::IsEnabled(
+       network::features::kCompressionDictionaryTransportBackend);
+-  bool is_interest_group_enabled =
+-      base::FeatureList::IsEnabled(blink::features::kAdInterestGroupAPI);
+-  bool is_attribution_reporting_enabled = base::FeatureList::IsEnabled(
+-      attribution_reporting::features::kConversionMeasurement);
+-  bool is_private_aggregation_enabled =
+-      base::FeatureList::IsEnabled(blink::features::kPrivateAggregationApi);
+   bool is_migrate_storage_to_bdm_enabled = base::FeatureList::IsEnabled(
+       browsing_data::features::kMigrateStorageToBDM);
+ 
+@@ -810,10 +801,12 @@ void BrowsingDataModel::PopulateFromDisk(base::OnceClosure finished_callback) {
+       base::BindOnce(&OnTrustTokenIssuanceInfoLoaded, this, completion));
+ 
+   // Shared storage origins
++  /*
+   if (is_shared_storage_enabled) {
+     storage_partition_->GetSharedStorageManager()->FetchOrigins(
+         base::BindOnce(&OnSharedStorageLoaded, this, completion));
+   }
++  */
+ 
+   // Shared Dictionaries.
+   if (is_shared_dictionary_enabled) {
+@@ -822,6 +815,7 @@ void BrowsingDataModel::PopulateFromDisk(base::OnceClosure finished_callback) {
+   }
+ 
+   // Interest Groups
++  /*
+   if (is_interest_group_enabled) {
+     storage_partition_->GetInterestGroupManager()->GetAllInterestGroupDataKeys(
+         base::BindOnce(&OnInterestGroupsLoaded, this, completion));
+@@ -838,6 +832,7 @@ void BrowsingDataModel::PopulateFromDisk(base::OnceClosure finished_callback) {
+     storage_partition_->GetPrivateAggregationDataModel()->GetAllDataKeys(
+         base::BindOnce(&OnPrivateAggregationLoaded, this, completion));
+   }
++  */
+ 
+   if (is_migrate_storage_to_bdm_enabled) {
+     quota_helper_->StartFetching(
+diff --git a/components/password_manager/content/browser/content_password_manager_driver_factory.cc b/components/password_manager/content/browser/content_password_manager_driver_factory.cc
+index de242cf8d4d..f2191a4f795 100644
+--- a/components/password_manager/content/browser/content_password_manager_driver_factory.cc
++++ b/components/password_manager/content/browser/content_password_manager_driver_factory.cc
+@@ -76,10 +76,12 @@ ContentPasswordManagerDriverFactory::GetDriverForFrame(
+   if (!render_frame_host->IsRenderFrameLive())
+     return nullptr;
+ 
++  /*
+   if (render_frame_host->IsNestedWithinFencedFrame() &&
+       !base::FeatureList::IsEnabled(blink::features::kFencedFramesAPIChanges)) {
+     return nullptr;
+   }
++  */
+ 
+   // try_emplace() will return an iterator to the driver corresponding to
+   // `render_frame_host`, creating a new one if `render_frame_host` is not
+diff --git a/content/browser/BUILD.gn b/content/browser/BUILD.gn
+index f3a9f07786e..46eb008be22 100644
+--- a/content/browser/BUILD.gn
++++ b/content/browser/BUILD.gn
+@@ -139,7 +139,6 @@ source_set("browser") {
+     "//content/browser/download:proto",
+     "//content/browser/file_system_access:proto",
+     "//content/browser/indexed_db:mojo_bindings",
+-    "//content/browser/interest_group:interest_group_proto",
+     "//content/browser/notifications:notification_proto",
+     "//content/browser/payments:payment_app_proto",
+     "//content/browser/private_aggregation/proto:private_aggregation_budgets_proto",
+@@ -1146,75 +1145,6 @@ source_set("browser") {
+     "indexed_db/transaction_impl.h",
+     "installedapp/installed_app_provider_impl.cc",
+     "installedapp/installed_app_provider_impl.h",
+-    "interest_group/ad_auction_document_data.cc",
+-    "interest_group/ad_auction_document_data.h",
+-    "interest_group/ad_auction_page_data.cc",
+-    "interest_group/ad_auction_page_data.h",
+-    "interest_group/ad_auction_result_metrics.cc",
+-    "interest_group/ad_auction_result_metrics.h",
+-    "interest_group/ad_auction_service_impl.cc",
+-    "interest_group/ad_auction_service_impl.h",
+-    "interest_group/ad_auction_url_loader_interceptor.cc",
+-    "interest_group/ad_auction_url_loader_interceptor.h",
+-    "interest_group/additional_bids_util.cc",
+-    "interest_group/additional_bids_util.h",
+-    "interest_group/auction_metrics_recorder.cc",
+-    "interest_group/auction_metrics_recorder.h",
+-    "interest_group/auction_nonce_manager.cc",
+-    "interest_group/auction_nonce_manager.h",
+-    "interest_group/auction_process_manager.cc",
+-    "interest_group/auction_process_manager.h",
+-    "interest_group/auction_result.h",
+-    "interest_group/auction_runner.cc",
+-    "interest_group/auction_runner.h",
+-    "interest_group/auction_shared_storage_host.cc",
+-    "interest_group/auction_shared_storage_host.h",
+-    "interest_group/auction_url_loader_factory_proxy.cc",
+-    "interest_group/auction_url_loader_factory_proxy.h",
+-    "interest_group/auction_worklet_manager.cc",
+-    "interest_group/auction_worklet_manager.h",
+-    "interest_group/bidding_and_auction_response.cc",
+-    "interest_group/bidding_and_auction_response.h",
+-    "interest_group/bidding_and_auction_serializer.cc",
+-    "interest_group/bidding_and_auction_serializer.h",
+-    "interest_group/bidding_and_auction_server_key_fetcher.cc",
+-    "interest_group/bidding_and_auction_server_key_fetcher.h",
+-    "interest_group/debuggable_auction_worklet.cc",
+-    "interest_group/debuggable_auction_worklet.h",
+-    "interest_group/debuggable_auction_worklet_tracker.cc",
+-    "interest_group/debuggable_auction_worklet_tracker.h",
+-    "interest_group/header_direct_from_seller_signals.cc",
+-    "interest_group/header_direct_from_seller_signals.h",
+-    "interest_group/interest_group_auction.cc",
+-    "interest_group/interest_group_auction.h",
+-    "interest_group/interest_group_auction_reporter.cc",
+-    "interest_group/interest_group_auction_reporter.h",
+-    "interest_group/interest_group_k_anonymity_manager.cc",
+-    "interest_group/interest_group_k_anonymity_manager.h",
+-    "interest_group/interest_group_manager_impl.cc",
+-    "interest_group/interest_group_manager_impl.h",
+-    "interest_group/interest_group_pa_report_util.cc",
+-    "interest_group/interest_group_pa_report_util.h",
+-    "interest_group/interest_group_permissions_cache.cc",
+-    "interest_group/interest_group_permissions_cache.h",
+-    "interest_group/interest_group_permissions_checker.cc",
+-    "interest_group/interest_group_permissions_checker.h",
+-    "interest_group/interest_group_priority_util.cc",
+-    "interest_group/interest_group_priority_util.h",
+-    "interest_group/interest_group_storage.cc",
+-    "interest_group/interest_group_storage.h",
+-    "interest_group/interest_group_update.cc",
+-    "interest_group/interest_group_update.h",
+-    "interest_group/interest_group_update_manager.cc",
+-    "interest_group/interest_group_update_manager.h",
+-    "interest_group/noiser_and_bucketer.cc",
+-    "interest_group/noiser_and_bucketer.h",
+-    "interest_group/storage_interest_group.cc",
+-    "interest_group/storage_interest_group.h",
+-    "interest_group/subresource_url_authorizations.cc",
+-    "interest_group/subresource_url_authorizations.h",
+-    "interest_group/subresource_url_builder.cc",
+-    "interest_group/subresource_url_builder.h",
+     "isolated_origin_util.cc",
+     "isolated_origin_util.h",
+     "isolation_context.cc",
+diff --git a/content/browser/renderer_host/render_frame_host_impl.h b/content/browser/renderer_host/render_frame_host_impl.h
+index 0dcd99adfe9..fa33b8260aa 100644
+--- a/content/browser/renderer_host/render_frame_host_impl.h
++++ b/content/browser/renderer_host/render_frame_host_impl.h
+@@ -2908,6 +2908,7 @@ class CONTENT_EXPORT RenderFrameHostImpl
+   // been opened with document.open().
+   void DidOpenDocumentInputStream() { is_initial_empty_document_ = false; }
+ 
++  // ?
+   enum class FencedFrameStatus {
+     kNotNestedInFencedFrame,
+     kFencedFrameRoot,
+diff --git a/content/child/runtime_features.cc b/content/child/runtime_features.cc
+index ae4626e7ace..00be67bd005 100644
+--- a/content/child/runtime_features.cc
++++ b/content/child/runtime_features.cc
+@@ -234,20 +234,16 @@ void SetRuntimeFeaturesFromChromiumFeatures() {
+     {wf::EnableFedCmIdpSigninStatus,
+      raw_ref(features::kFedCmIdpSigninStatusEnabled), kSetOnlyIfOverridden},
+     {wf::EnableGamepadMultitouch, raw_ref(features::kEnableGamepadMultitouch)},
+-    {wf::EnableSharedStorageAPI,
+-     raw_ref(features::kPrivacySandboxAdsAPIsOverride), kSetOnlyIfOverridden},
+-    {wf::EnableSharedStorageAPI,
+-     raw_ref(features::kPrivacySandboxAdsAPIsM1Override), kSetOnlyIfOverridden},
+-    {wf::EnableSharedStorageAPIM118,
+-     raw_ref(blink::features::kSharedStorageAPIM118), kSetOnlyIfOverridden},
+     {wf::EnableFedCmMultipleIdentityProviders,
+      raw_ref(features::kFedCmMultipleIdentityProviders), kDefault},
+     {wf::EnableFedCmSelectiveDisclosure,
+      raw_ref(features::kFedCmSelectiveDisclosure), kDefault},
++    /*
+     {wf::EnableFencedFrames, raw_ref(features::kPrivacySandboxAdsAPIsOverride),
+      kSetOnlyIfOverridden},
+     {wf::EnableFencedFrames,
+      raw_ref(features::kPrivacySandboxAdsAPIsM1Override), kSetOnlyIfOverridden},
++    */
+     {wf::EnableForcedColors, raw_ref(features::kForcedColors)},
+     {wf::EnableFractionalScrollOffsets,
+      raw_ref(features::kFractionalScrollOffsets)},
+@@ -366,11 +362,6 @@ void SetRuntimeFeaturesFromChromiumFeatures() {
+     {"CookieDeprecationFacilitatedTesting",
+      raw_ref(features::kCookieDeprecationFacilitatedTesting)},
+     {"Database", raw_ref(blink::features::kWebSQLAccess), kSetOnlyIfOverridden},
+-    {"Fledge", raw_ref(blink::features::kFledge), kSetOnlyIfOverridden},
+-    {"Fledge", raw_ref(features::kPrivacySandboxAdsAPIsOverride),
+-     kSetOnlyIfOverridden},
+-    {"Fledge", raw_ref(features::kPrivacySandboxAdsAPIsM1Override),
+-     kSetOnlyIfOverridden},
+ #if BUILDFLAG(USE_FONTATIONS_BACKEND)
+     {"FontationsFontBackend", raw_ref(blink::features::kFontationsFontBackend)},
+ #endif
+@@ -380,6 +371,7 @@ void SetRuntimeFeaturesFromChromiumFeatures() {
+     {"OriginIsolationHeader", raw_ref(features::kOriginIsolationHeader)},
+     {"PartitionedCookies", raw_ref(net::features::kPartitionedCookies)},
+     {"ReduceAcceptLanguage", raw_ref(network::features::kReduceAcceptLanguage)},
++    /*
+     {"StorageAccessAPI", raw_ref(features::kFirstPartySets)},
+     {"TopicsAPI", raw_ref(features::kPrivacySandboxAdsAPIsOverride),
+      kSetOnlyIfOverridden},
+@@ -391,6 +383,7 @@ void SetRuntimeFeaturesFromChromiumFeatures() {
+      kSetOnlyIfOverridden},
+     {"TopicsDocumentAPI", raw_ref(features::kPrivacySandboxAdsAPIsM1Override),
+      kSetOnlyIfOverridden},
++    */
+     {"TouchTextEditingRedesign", raw_ref(features::kTouchTextEditingRedesign)},
+     {"TrustedTypesFromLiteral", raw_ref(features::kTrustedTypesFromLiteral)},
+     {"WebSerialBluetooth",
+@@ -570,6 +563,8 @@ void SetCustomizedRuntimeFeaturesFromCombinedArgs(
+   if (base::FeatureList::IsEnabled(network::features::kPrivateStateTokens)) {
+     WebRuntimeFeatures::EnablePrivateStateTokens(true);
+     WebRuntimeFeatures::EnablePrivateStateTokensAlwaysAllowIssuance(true);
++  }
++  /*
+   } else if (base::FeatureList::IsEnabled(network::features::kFledgePst)) {
+     // See https://bit.ly/configuring-trust-tokens.
+     using network::features::TrustTokenOriginTrialSpec;
+@@ -597,6 +592,7 @@ void SetCustomizedRuntimeFeaturesFromCombinedArgs(
+         break;
+     }
+   }
++  */
+ 
+   // Enables the Blink feature only when the base feature variation is enabled.
+   if (base::FeatureList::IsEnabled(features::kFedCm)) {
+@@ -635,6 +631,7 @@ void ResolveInvalidConfigurations() {
+     WebRuntimeFeatures::EnablePortals(false);
+   }
+ 
++  /*
+   // Fenced frames, like Portals, cannot be enabled without the support of the
+   // browser process.
+   if ((base::FeatureList::IsEnabled(features::kPrivacySandboxAdsAPIsOverride) ||
+@@ -719,6 +716,7 @@ void ResolveInvalidConfigurations() {
+     WebRuntimeFeatures::EnableAdInterestGroupAPI(false);
+     WebRuntimeFeatures::EnableFledge(false);
+   }
++  */
+ }
+ 
+ }  // namespace
+diff --git a/third_party/blink/renderer/bindings/generated_in_core.gni b/third_party/blink/renderer/bindings/generated_in_core.gni
+index ac13a1e9452..e947c09f9ac 100644
+--- a/third_party/blink/renderer/bindings/generated_in_core.gni
++++ b/third_party/blink/renderer/bindings/generated_in_core.gni
+@@ -171,8 +171,6 @@ generated_dictionary_sources_in_core = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_event_listener_options.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_event_modifier_init.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_event_modifier_init.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_fence_event.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_fence_event.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_file_property_bag.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_file_property_bag.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_focus_event_init.cc",
+@@ -468,8 +466,6 @@ generated_enumeration_sources_in_core = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_document_ready_state.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_ending_type.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_ending_type.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_fence_reporting_destination.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_fence_reporting_destination.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_fetch_priority.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_fetch_priority.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_fill_mode.cc",
+@@ -514,8 +510,6 @@ generated_enumeration_sources_in_core = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_navigation_timing_type.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_navigation_type.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_navigation_type.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_opaque_property.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_opaque_property.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_operation_type.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_operation_type.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_playback_direction.cc",
+@@ -883,10 +877,6 @@ generated_interface_sources_in_core = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_external.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_feature_policy.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_feature_policy.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_fence.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_fence.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_fenced_frame_config.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_fenced_frame_config.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_fetch_later_result.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_fetch_later_result.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_file.cc",
+@@ -963,8 +953,6 @@ generated_interface_sources_in_core = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_html_element.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_html_embed_element.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_html_embed_element.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_html_fenced_frame_element.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_html_fenced_frame_element.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_html_field_set_element.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_html_field_set_element.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_html_font_element.cc",
+@@ -1789,10 +1777,6 @@ generated_union_sources_in_core = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_elementcreationoptions_string.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_event_string.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_event_string.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_fencedframeconfig_usvstring.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_fencedframeconfig_usvstring.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_fenceevent_string.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_fenceevent_string.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_file_formdata_usvstring.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_file_formdata_usvstring.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_file_usvstring.cc",
+@@ -1823,10 +1807,6 @@ generated_union_sources_in_core = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_object_objectarray.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_object_string.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_object_string.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_opaqueproperty_unsignedlong.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_opaqueproperty_unsignedlong.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_opaqueproperty_usvstring.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_opaqueproperty_usvstring.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_performancemeasureoptions_string.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_performancemeasureoptions_string.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/core/v8/v8_union_range_selection.cc",
+diff --git a/third_party/blink/renderer/bindings/generated_in_modules.gni b/third_party/blink/renderer/bindings/generated_in_modules.gni
+index 11995811413..387bd78ed99 100644
+--- a/third_party/blink/renderer/bindings/generated_in_modules.gni
++++ b/third_party/blink/renderer/bindings/generated_in_modules.gni
+@@ -59,10 +59,6 @@ generated_callback_function_sources_in_modules = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_rtc_session_description_callback.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_rtc_stats_callback.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_rtc_stats_callback.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_run_function_for_shared_storage_run_operation.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_run_function_for_shared_storage_run_operation.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_run_function_for_shared_storage_select_url_operation.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_run_function_for_shared_storage_select_url_operation.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_scheduler_post_task_callback.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_scheduler_post_task_callback.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_state_callback.cc",
+@@ -111,16 +107,6 @@ generated_callback_interface_sources_in_modules = [
+ generated_dictionary_sources_in_modules = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_aac_encoder_config.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_aac_encoder_config.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_auction_data.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_auction_data.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_auction_data_config.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_auction_data_config.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_properties.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_properties.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_request_config.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_request_config.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_targeting.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_targeting.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_address_errors.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_address_errors.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_address_init.cc",
+@@ -131,20 +117,6 @@ generated_dictionary_sources_in_modules = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_android_pay_method_data.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_app_banner_prompt_result.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_app_banner_prompt_result.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_ad.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_ad.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_ad_config.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_ad_config.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_ad_interest_group.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_ad_interest_group.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_ad_interest_group_key.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_ad_interest_group_key.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_ad_interest_group_size.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_ad_interest_group_size.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_additional_bid_signature.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_additional_bid_signature.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_report_buyers_config.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_auction_report_buyers_config.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_audio_buffer_options.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_audio_buffer_options.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_audio_buffer_source_options.cc",
+@@ -241,10 +213,6 @@ generated_dictionary_sources_in_modules = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_bluetooth_le_scan_options.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_bluetooth_manufacturer_data_filter_init.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_bluetooth_manufacturer_data_filter_init.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_browsing_topic.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_browsing_topic.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_browsing_topics_options.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_browsing_topics_options.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_cable_authentication_data.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_cable_authentication_data.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_cache_query_options.cc",
+@@ -855,20 +823,6 @@ generated_dictionary_sources_in_modules = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_presentation_source.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_pressure_observer_options.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_pressure_observer_options.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_aggregation_debug_mode_options.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_aggregation_debug_mode_options.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_aggregation_histogram_contribution.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_aggregation_histogram_contribution.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution_encrypted_match_key.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution_encrypted_match_key.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution_helper_info.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution_helper_info.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution_helper_share.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution_helper_share.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution_network.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution_network.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution_options.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution_options.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_public_key_credential_creation_options.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_public_key_credential_creation_options.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_public_key_credential_descriptor.cc",
+@@ -1043,14 +997,6 @@ generated_dictionary_sources_in_modules = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_sensor_options.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_share_data.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_share_data.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_private_aggregation_config.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_private_aggregation_config.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_run_operation_method_options.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_run_operation_method_options.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_set_method_options.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_set_method_options.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_url_with_metadata.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_url_with_metadata.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_source_buffer_config.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_source_buffer_config.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_spatial_sensor_options.cc",
+@@ -1196,10 +1142,6 @@ generated_dictionary_sources_in_modules = [
+ generated_enumeration_sources_in_modules = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_aac_bitstream_format.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_aac_bitstream_format.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_signals.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_signals.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_auction_coordinator.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ad_auction_coordinator.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_alpha_option.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_alpha_option.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ancestor_status.cc",
+@@ -1518,8 +1460,6 @@ generated_enumeration_sources_in_modules = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_pressure_source.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_pressure_state.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_pressure_state.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution_event.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution_event.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_public_key_credential_type.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_public_key_credential_type.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_push_encryption_key_name.cc",
+@@ -1697,8 +1637,6 @@ generated_interface_sources_in_modules = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_absolute_orientation_sensor.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_accelerometer.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_accelerometer.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ads.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ads.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ambient_light_sensor.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_ambient_light_sensor.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_analyser_node.cc",
+@@ -2419,10 +2357,6 @@ generated_interface_sources_in_modules = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_pressure_observer.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_pressure_record.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_pressure_record.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_aggregation.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_aggregation.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_private_attribution.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_public_key_credential.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_public_key_credential.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_push_event.cc",
+@@ -2519,14 +2453,6 @@ generated_interface_sources_in_modules = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_service_worker_global_scope.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_service_worker_registration.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_service_worker_registration.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_iterator.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_iterator.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_worklet.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_worklet.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_worklet_global_scope.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_storage_worklet_global_scope.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_worker_global_scope.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_shared_worker_global_scope.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_source_buffer.cc",
+@@ -2918,8 +2844,6 @@ generated_typedef_sources_in_modules = [
+ generated_union_sources_in_modules = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_union_abortsignal_schedulersignalinherit.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_union_abortsignal_schedulersignalinherit.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_union_adproperties_adpropertiessequence.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_union_adproperties_adpropertiessequence.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_union_arraybuffer_arraybufferview_blob_usvstring_writeparams.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_union_arraybuffer_arraybufferview_blob_usvstring_writeparams.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_union_arraybuffer_arraybufferview_jsonwebkey.cc",
+diff --git a/third_party/blink/renderer/bindings/idl_in_core.gni b/third_party/blink/renderer/bindings/idl_in_core.gni
+index 5042cd63abd..55b9c570e44 100644
+--- a/third_party/blink/renderer/bindings/idl_in_core.gni
++++ b/third_party/blink/renderer/bindings/idl_in_core.gni
+@@ -361,10 +361,6 @@ static_idl_files_in_core = [
+   "//third_party/blink/renderer/core/html/custom/element_internals.idl",
+   "//third_party/blink/renderer/core/html/custom/validity_state_flags.idl",
+   "//third_party/blink/renderer/core/html/event_handler.idl",
+-  "//third_party/blink/renderer/core/html/fenced_frame/fence.idl",
+-  "//third_party/blink/renderer/core/html/fenced_frame/fence_event.idl",
+-  "//third_party/blink/renderer/core/html/fenced_frame/fenced_frame_config.idl",
+-  "//third_party/blink/renderer/core/html/fenced_frame/html_fenced_frame_element.idl",
+   "//third_party/blink/renderer/core/html/focus_options.idl",
+   "//third_party/blink/renderer/core/html/forms/form_data.idl",
+   "//third_party/blink/renderer/core/html/forms/form_data_event.idl",
+@@ -391,7 +387,6 @@ static_idl_files_in_core = [
+   "//third_party/blink/renderer/core/html/html_all_collection.idl",
+   "//third_party/blink/renderer/core/html/html_anchor_element.idl",
+   "//third_party/blink/renderer/core/html/html_area_element.idl",
+-  "//third_party/blink/renderer/core/html/html_attributionsrc_element_utils.idl",
+   "//third_party/blink/renderer/core/html/html_base_element.idl",
+   "//third_party/blink/renderer/core/html/html_body_element.idl",
+   "//third_party/blink/renderer/core/html/html_br_element.idl",
+@@ -434,7 +429,6 @@ static_idl_files_in_core = [
+   "//third_party/blink/renderer/core/html/html_progress_element.idl",
+   "//third_party/blink/renderer/core/html/html_quote_element.idl",
+   "//third_party/blink/renderer/core/html/html_script_element.idl",
+-  "//third_party/blink/renderer/core/html/html_shared_storage_writable_element_utils.idl",
+   "//third_party/blink/renderer/core/html/html_slot_element.idl",
+   "//third_party/blink/renderer/core/html/html_source_element.idl",
+   "//third_party/blink/renderer/core/html/html_span_element.idl",
+diff --git a/third_party/blink/renderer/bindings/idl_in_modules.gni b/third_party/blink/renderer/bindings/idl_in_modules.gni
+index 9388e0e761d..0d6ad80a88b 100644
+--- a/third_party/blink/renderer/bindings/idl_in_modules.gni
++++ b/third_party/blink/renderer/bindings/idl_in_modules.gni
+@@ -7,13 +7,6 @@ import("//third_party/blink/renderer/config.gni")
+ # Statically-defined (not build-time-generated) IDL files in 'modules' component
+ # for production.
+ static_idl_files_in_modules = [
+-  "//third_party/blink/renderer/modules/ad_auction/ad_auction_data_config.idl",
+-  "//third_party/blink/renderer/modules/ad_auction/ad_request_config.idl",
+-  "//third_party/blink/renderer/modules/ad_auction/ads.idl",
+-  "//third_party/blink/renderer/modules/ad_auction/auction_ad.idl",
+-  "//third_party/blink/renderer/modules/ad_auction/auction_ad_config.idl",
+-  "//third_party/blink/renderer/modules/ad_auction/auction_ad_interest_group.idl",
+-  "//third_party/blink/renderer/modules/ad_auction/navigator_auction.idl",
+   "//third_party/blink/renderer/modules/animationworklet/animation_worklet_global_scope.idl",
+   "//third_party/blink/renderer/modules/animationworklet/css_animation_worklet.idl",
+   "//third_party/blink/renderer/modules/animationworklet/worklet_animation.idl",
+@@ -74,9 +67,6 @@ static_idl_files_in_modules = [
+   "//third_party/blink/renderer/modules/breakout_box/media_stream_track_processor_init.idl",
+   "//third_party/blink/renderer/modules/breakout_box/video_track_generator.idl",
+   "//third_party/blink/renderer/modules/broadcastchannel/broadcast_channel.idl",
+-  "//third_party/blink/renderer/modules/browsing_topics/browsing_topic.idl",
+-  "//third_party/blink/renderer/modules/browsing_topics/browsing_topics_document_supplement.idl",
+-  "//third_party/blink/renderer/modules/browsing_topics/browsing_topics_options.idl",
+   "//third_party/blink/renderer/modules/buckets/navigator_storage_buckets.idl",
+   "//third_party/blink/renderer/modules/buckets/storage_bucket.idl",
+   "//third_party/blink/renderer/modules/buckets/storage_bucket_manager.idl",
+@@ -645,8 +635,6 @@ static_idl_files_in_modules = [
+   "//third_party/blink/renderer/modules/presentation/presentation_receiver.idl",
+   "//third_party/blink/renderer/modules/presentation/presentation_request.idl",
+   "//third_party/blink/renderer/modules/presentation/presentation_source.idl",
+-  "//third_party/blink/renderer/modules/private_attribution/private_attribution.idl",
+-  "//third_party/blink/renderer/modules/private_attribution/window_private_attribution.idl",
+   "//third_party/blink/renderer/modules/push_messaging/push_event.idl",
+   "//third_party/blink/renderer/modules/push_messaging/push_event_init.idl",
+   "//third_party/blink/renderer/modules/push_messaging/push_manager.idl",
+@@ -735,18 +723,6 @@ static_idl_files_in_modules = [
+   "//third_party/blink/renderer/modules/shapedetection/face_detector_options.idl",
+   "//third_party/blink/renderer/modules/shapedetection/landmark.idl",
+   "//third_party/blink/renderer/modules/shapedetection/text_detector.idl",
+-  "//third_party/blink/renderer/modules/shared_storage/private_aggregation.idl",
+-  "//third_party/blink/renderer/modules/shared_storage/private_aggregation_debug_mode_options.idl",
+-  "//third_party/blink/renderer/modules/shared_storage/private_aggregation_histogram_contribution.idl",
+-  "//third_party/blink/renderer/modules/shared_storage/shared_storage.idl",
+-  "//third_party/blink/renderer/modules/shared_storage/shared_storage_iterator.idl",
+-  "//third_party/blink/renderer/modules/shared_storage/shared_storage_private_aggregation_config.idl",
+-  "//third_party/blink/renderer/modules/shared_storage/shared_storage_run_operation_method_options.idl",
+-  "//third_party/blink/renderer/modules/shared_storage/shared_storage_set_method_options.idl",
+-  "//third_party/blink/renderer/modules/shared_storage/shared_storage_url_with_metadata.idl",
+-  "//third_party/blink/renderer/modules/shared_storage/shared_storage_worklet.idl",
+-  "//third_party/blink/renderer/modules/shared_storage/shared_storage_worklet_global_scope.idl",
+-  "//third_party/blink/renderer/modules/shared_storage/window_shared_storage.idl",
+   "//third_party/blink/renderer/modules/speech/speech_grammar.idl",
+   "//third_party/blink/renderer/modules/speech/speech_grammar_list.idl",
+   "//third_party/blink/renderer/modules/speech/speech_recognition.idl",
+diff --git a/third_party/blink/renderer/core/fetch/request.cc b/third_party/blink/renderer/core/fetch/request.cc
+index 1bdd05f397d..0a1c6dd757f 100644
+--- a/third_party/blink/renderer/core/fetch/request.cc
++++ b/third_party/blink/renderer/core/fetch/request.cc
+@@ -95,9 +95,6 @@ FetchRequestData* CreateCopyOfFetchRequestDataForFetch(
+   request->SetFetchPriorityHint(original->FetchPriorityHint());
+   request->SetPriority(original->Priority());
+   request->SetKeepalive(original->Keepalive());
+-  request->SetBrowsingTopics(original->BrowsingTopics());
+-  request->SetAdAuctionHeaders(original->AdAuctionHeaders());
+-  request->SetSharedStorageWritable(original->SharedStorageWritable());
+   request->SetIsHistoryNavigation(original->IsHistoryNavigation());
+   if (original->URLLoaderFactory()) {
+     mojo::PendingRemote<network::mojom::blink::URLLoaderFactory> factory_clone;
+@@ -107,8 +104,6 @@ FetchRequestData* CreateCopyOfFetchRequestDataForFetch(
+   }
+   request->SetWindowId(original->WindowId());
+   request->SetTrustTokenParams(original->TrustTokenParams());
+-  request->SetAttributionReportingEligibility(
+-      original->AttributionReportingEligibility());
+   request->SetServiceWorkerRaceNetworkRequestToken(
+       original->ServiceWorkerRaceNetworkRequestToken());
+ 
+@@ -131,10 +126,9 @@ static bool AreAnyMembersPresent(const RequestInit* init) {
+          init->hasReferrer() || init->hasReferrerPolicy() || init->hasMode() ||
+          init->hasTargetAddressSpace() || init->hasCredentials() ||
+          init->hasCache() || init->hasRedirect() || init->hasIntegrity() ||
+-         init->hasKeepalive() || init->hasBrowsingTopics() ||
+-         init->hasAdAuctionHeaders() || init->hasSharedStorageWritable() ||
++         init->hasKeepalive() ||
+          init->hasPriority() || init->hasSignal() || init->hasDuplex() ||
+-         init->hasPrivateToken() || init->hasAttributionReporting();
++         init->hasPrivateToken();
+ }
+ 
+ static BodyStreamBuffer* ExtractBody(ScriptState* script_state,
+@@ -543,6 +537,7 @@ Request* Request::CreateRequestWithRequestOrString(
+   if (init->hasKeepalive())
+     request->SetKeepalive(init->keepalive());
+ 
++  /*
+   if (init->hasBrowsingTopics()) {
+     if (!execution_context->IsSecureContext()) {
+       exception_state.ThrowTypeError(
+@@ -585,6 +580,7 @@ Request* Request::CreateRequestWithRequestOrString(
+           mojom::blink::WebFeature::kSharedStorageAPI_Fetch_Attribute);
+     }
+   }
++  */
+ 
+   // "If |init|'s method member is present, let |method| be it and run these
+   // substeps:"
+@@ -636,6 +632,7 @@ Request* Request::CreateRequestWithRequestOrString(
+     request->SetTrustTokenParams(std::move(params));
+   }
+ 
++  /*
+   if (init->hasAttributionReporting()) {
+     if (!execution_context->IsSecureContext()) {
+       exception_state.ThrowTypeError(
+@@ -649,6 +646,7 @@ Request* Request::CreateRequestWithRequestOrString(
+             *init->attributionReporting(), *execution_context,
+             exception_state));
+   }
++  */
+ 
+   AbortSignal* request_signal = nullptr;
+   if (RuntimeEnabledFeatures::AbortSignalAnyEnabled()) {
+diff --git a/third_party/blink/renderer/core/fetch/request_init.idl b/third_party/blink/renderer/core/fetch/request_init.idl
+index 7e7a0b3794d..2d2269f5cdd 100644
+--- a/third_party/blink/renderer/core/fetch/request_init.idl
++++ b/third_party/blink/renderer/core/fetch/request_init.idl
+@@ -22,9 +22,6 @@ dictionary RequestInit {
+     DOMString integrity;
+     boolean keepalive;
+     FetchPriority priority;
+-    [RuntimeEnabled=TopicsAPI, Exposed=Window] boolean browsingTopics;
+-    [RuntimeEnabled=AdInterestGroupAPI, Exposed=Window] boolean adAuctionHeaders;
+-    [RuntimeEnabled=SharedStorageAPIM118, Exposed=Window] boolean sharedStorageWritable;
+     AbortSignal? signal;
+     [RuntimeEnabled=FetchUploadStreaming] RequestDuplex duplex;
+     [RuntimeEnabled=PrivateNetworkAccessPermissionPrompt] IPAddressSpace targetAddressSpace;
+@@ -32,7 +29,6 @@ dictionary RequestInit {
+     // available in secure contexts, this has to be enforced after the fact
+     // because the SecureContext IDL attribute doesn't affect dictionary members.
+     [RuntimeEnabled=PrivateStateTokens] PrivateToken privateToken;
+-    [RuntimeEnabled=AttributionReportingInterface] AttributionReportingRequestOptions attributionReporting;
+     // TODO(domfarolino): add support for RequestInit window member.
+     //any window; // can only be set to null
+ };
+diff --git a/third_party/blink/renderer/core/frame/window.idl b/third_party/blink/renderer/core/frame/window.idl
+index b276d30fff5..d3d64d08726 100644
+--- a/third_party/blink/renderer/core/frame/window.idl
++++ b/third_party/blink/renderer/core/frame/window.idl
+@@ -212,10 +212,6 @@
+     // Anonymous iframe:
+     // https://github.com/WICG/anonymous-iframe
+     [RuntimeEnabled=AnonymousIframe] readonly attribute boolean credentialless;
+-
+-    // Collection of fenced frame APIs
+-    // https://github.com/shivanigithub/fenced-frame/issues/14
+-    [RuntimeEnabled=FencedFrames] readonly attribute Fence? fence;
+ };
+ 
+ Window includes GlobalEventHandlers;
+diff --git a/third_party/blink/renderer/core/html/html_anchor_element.idl b/third_party/blink/renderer/core/html/html_anchor_element.idl
+index 0e7860050f1..6520bacb61e 100644
+--- a/third_party/blink/renderer/core/html/html_anchor_element.idl
++++ b/third_party/blink/renderer/core/html/html_anchor_element.idl
+@@ -44,5 +44,4 @@
+     [CEReactions, Reflect] attribute DOMString shape;
+ };
+ 
+-HTMLAnchorElement includes HTMLAttributionSrcElementUtils;
+ HTMLAnchorElement includes HTMLHyperlinkElementUtils;
+diff --git a/third_party/blink/renderer/core/html/html_iframe_element.cc b/third_party/blink/renderer/core/html/html_iframe_element.cc
+index 6f6be4bbdaa..1e6ea7d95f9 100644
+--- a/third_party/blink/renderer/core/html/html_iframe_element.cc
++++ b/third_party/blink/renderer/core/html/html_iframe_element.cc
+@@ -273,7 +273,7 @@ void HTMLIFrameElement::ParseAttribute(
+       should_call_did_change_attributes = true;
+       UseCounter::Count(GetDocument(), WebFeature::kIFrameCSPAttribute);
+     }
+-  } else if (name == html_names::kBrowsingtopicsAttr) {
++  } else if (false && name == html_names::kBrowsingtopicsAttr) {
+     if (RuntimeEnabledFeatures::TopicsAPIEnabled(GetExecutionContext()) &&
+         GetExecutionContext()->IsSecureContext()) {
+       bool old_browsing_topics = !params.old_value.IsNull();
+@@ -594,7 +594,7 @@ void HTMLIFrameElement::DidChangeAttributes() {
+   attributes->parsed_csp_attribute = csp.empty() ? nullptr : std::move(csp[0]);
+   attributes->credentialless = credentialless_;
+ 
+-  if (RuntimeEnabledFeatures::TopicsAPIEnabled(GetExecutionContext()) &&
++  if (false && RuntimeEnabledFeatures::TopicsAPIEnabled(GetExecutionContext()) &&
+       GetExecutionContext()->IsSecureContext()) {
+     attributes->browsing_topics =
+         !FastGetAttribute(html_names::kBrowsingtopicsAttr).IsNull();
+diff --git a/third_party/blink/renderer/core/html/html_iframe_element.idl b/third_party/blink/renderer/core/html/html_iframe_element.idl
+index 5b483d356ca..35bcb96bb1f 100644
+--- a/third_party/blink/renderer/core/html/html_iframe_element.idl
++++ b/third_party/blink/renderer/core/html/html_iframe_element.idl
+@@ -56,9 +56,6 @@
+     // Trust Tokens request parameters (https://github.com/wicg/trust-token-api)
+     [RuntimeEnabled=PrivateStateTokens, SecureContext, Reflect, MeasureAs=TrustTokenIframe] attribute DOMString privateToken;
+ 
+-    // Topics API (https://github.com/patcg-individual-drafts/topics)
+-    [RuntimeEnabled=TopicsAPI, SecureContext, CEReactions, Reflect] attribute boolean browsingTopics;
+-
+     // Iframes credentialless
+     // https://github.com/WICG/anonymous-iframe
+     [CEReactions, Reflect, RuntimeEnabled=AnonymousIframe] attribute boolean credentialless;
+@@ -73,6 +70,3 @@
+     [CEReactions, Reflect] attribute [LegacyNullToEmptyString] DOMString marginHeight;
+     [CEReactions, Reflect] attribute [LegacyNullToEmptyString] DOMString marginWidth;
+ };
+-
+-// Shared Storage API (https://github.com/WICG/shared-storage#from-response-headers)
+-HTMLIFrameElement includes HTMLSharedStorageWritableElementUtils;
+diff --git a/third_party/blink/renderer/core/html/html_iframe_element_sandbox.cc b/third_party/blink/renderer/core/html/html_iframe_element_sandbox.cc
+index 061f2ae228b..9854306cbb3 100644
+--- a/third_party/blink/renderer/core/html/html_iframe_element_sandbox.cc
++++ b/third_party/blink/renderer/core/html/html_iframe_element_sandbox.cc
+@@ -4,7 +4,6 @@
+ 
+ #include "third_party/blink/renderer/core/html/html_iframe_element_sandbox.h"
+ 
+-#include "third_party/blink/renderer/core/html/fenced_frame/html_fenced_frame_element.h"
+ #include "third_party/blink/renderer/core/html/html_frame_owner_element.h"
+ #include "third_party/blink/renderer/core/html/html_iframe_element.h"
+ #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
+@@ -57,8 +56,7 @@ bool IsTokenSupported(const AtomicString& token) {
+ HTMLIFrameElementSandbox::HTMLIFrameElementSandbox(
+     HTMLFrameOwnerElement* element)
+     : DOMTokenList(*element, html_names::kSandboxAttr) {
+-  DCHECK(IsA<HTMLIFrameElement>(element) ||
+-         IsA<HTMLFencedFrameElement>(element));
++  DCHECK(IsA<HTMLIFrameElement>(element));
+ }
+ 
+ bool HTMLIFrameElementSandbox::ValidateTokenValue(
+diff --git a/third_party/blink/renderer/core/html/html_image_element.cc b/third_party/blink/renderer/core/html/html_image_element.cc
+index 3e78cc6f44e..5d35b4f4024 100644
+--- a/third_party/blink/renderer/core/html/html_image_element.cc
++++ b/third_party/blink/renderer/core/html/html_image_element.cc
+@@ -388,6 +388,7 @@ void HTMLImageElement::ParseAttribute(
+       window->GetFrame()->GetAttributionSrcLoader()->Register(params.new_value,
+                                                               /*element=*/this);
+     }
++  /*
+   } else if (name == html_names::kSharedstoragewritableAttr &&
+              RuntimeEnabledFeatures::SharedStorageAPIM118Enabled(
+                  GetExecutionContext())) {
+@@ -401,6 +402,7 @@ void HTMLImageElement::ParseAttribute(
+       UseCounter::Count(GetDocument(),
+                         WebFeature::kSharedStorageAPI_Image_Attribute);
+     }
++  */
+   } else {
+     HTMLElement::ParseAttribute(params);
+   }
+diff --git a/third_party/blink/renderer/core/html/html_image_element.idl b/third_party/blink/renderer/core/html/html_image_element.idl
+index 1d21e1de165..d870fbe3e1a 100644
+--- a/third_party/blink/renderer/core/html/html_image_element.idl
++++ b/third_party/blink/renderer/core/html/html_image_element.idl
+@@ -65,5 +65,3 @@
+     [CallWith=ScriptState, RaisesException] Promise<void> decode();
+ };
+ 
+-HTMLImageElement includes HTMLAttributionSrcElementUtils;
+-HTMLImageElement includes HTMLSharedStorageWritableElementUtils;
+diff --git a/third_party/blink/renderer/core/html/html_script_element.idl b/third_party/blink/renderer/core/html/html_script_element.idl
+index 2f2fad8285c..bac067a5c13 100644
+--- a/third_party/blink/renderer/core/html/html_script_element.idl
++++ b/third_party/blink/renderer/core/html/html_script_element.idl
+@@ -50,6 +50,3 @@
+     // https://html.spec.whatwg.org/multipage/scripting.html#dom-script-blocking
+     [SameObject, PutForwards=value] readonly attribute DOMTokenList blocking;
+ };
+-
+-// https://wicg.github.io/attribution-reporting-api
+-HTMLScriptElement includes HTMLAttributionSrcElementUtils;
+diff --git a/third_party/blink/renderer/core/html/parser/preload_request.cc b/third_party/blink/renderer/core/html/parser/preload_request.cc
+index e4506803247..bca9503d31d 100644
+--- a/third_party/blink/renderer/core/html/parser/preload_request.cc
++++ b/third_party/blink/renderer/core/html/parser/preload_request.cc
+@@ -6,10 +6,8 @@
+ 
+ #include "base/memory/ptr_util.h"
+ #include "base/metrics/histogram_functions.h"
+-#include "services/network/public/mojom/attribution.mojom-blink.h"
+ #include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/renderer/core/dom/document.h"
+-#include "third_party/blink/renderer/core/frame/attribution_src_loader.h"
+ #include "third_party/blink/renderer/core/frame/local_dom_window.h"
+ #include "third_party/blink/renderer/core/frame/local_frame.h"
+ #include "third_party/blink/renderer/core/frame/settings.h"
+@@ -114,13 +112,15 @@ Resource* PreloadRequest::Start(Document* document) {
+ 
+   // Disable issue logging to avoid duplicates, since `CanRegister()` will be
+   // called again later.
++  /*
+   if (is_attribution_reporting_eligible_img_or_script_ &&
+       document->domWindow()->GetFrame()->GetAttributionSrcLoader()->CanRegister(
+-          url, /*element=*/nullptr,
+-          /*request_id=*/absl::nullopt, /*log_issues=*/false)) {
++          url, /*element=*nullptr,
++          /*request_id=*absl::nullopt, /*log_issues=*false)) {
+     resource_request.SetAttributionReportingEligibility(
+         network::mojom::AttributionReportingEligibility::kEventSourceOrTrigger);
+   }
++  */
+ 
+   bool shared_storage_writable =
+       shared_storage_writable_ &&
+diff --git a/third_party/blink/renderer/core/html/parser/preload_request.h b/third_party/blink/renderer/core/html/parser/preload_request.h
+index e93b032a9b6..3595d168d35 100644
+--- a/third_party/blink/renderer/core/html/parser/preload_request.h
++++ b/third_party/blink/renderer/core/html/parser/preload_request.h
+@@ -140,7 +140,7 @@ class CORE_EXPORT PreloadRequest {
+   }
+ 
+   void SetAttributionReportingEligibleImgOrScript(bool eligible) {
+-    is_attribution_reporting_eligible_img_or_script_ = eligible;
++    // is_attribution_reporting_eligible_img_or_script_ = eligible;
+   }
+ 
+   void SetIsPotentiallyLCPElement(bool flag) {
+@@ -209,7 +209,7 @@ class CORE_EXPORT PreloadRequest {
+   const ResourceFetcher::IsImageSet is_image_set_;
+   bool is_lazy_load_image_enabled_ = false;
+   base::TimeTicks creation_time_ = base::TimeTicks::Now();
+-  bool is_attribution_reporting_eligible_img_or_script_ = false;
++  const bool is_attribution_reporting_eligible_img_or_script_ = false;
+   bool is_potentially_lcp_element_ = false;
+   bool is_potentially_lcp_influencer_ = false;
+   bool shared_storage_writable_ = false;
+diff --git a/third_party/blink/renderer/core/inspector/inspector_dom_agent.cc b/third_party/blink/renderer/core/inspector/inspector_dom_agent.cc
+index 5152fecb714..6a3ff8d8e7f 100644
+--- a/third_party/blink/renderer/core/inspector/inspector_dom_agent.cc
++++ b/third_party/blink/renderer/core/inspector/inspector_dom_agent.cc
+@@ -64,8 +64,6 @@
+ #include "third_party/blink/renderer/core/frame/frame.h"
+ #include "third_party/blink/renderer/core/frame/local_frame.h"
+ #include "third_party/blink/renderer/core/frame/remote_frame.h"
+-#include "third_party/blink/renderer/core/html/fenced_frame/document_fenced_frames.h"
+-#include "third_party/blink/renderer/core/html/fenced_frame/html_fenced_frame_element.h"
+ #include "third_party/blink/renderer/core/html/forms/html_input_element.h"
+ #include "third_party/blink/renderer/core/html/html_document.h"
+ #include "third_party/blink/renderer/core/html/html_frame_owner_element.h"
+@@ -2648,7 +2646,7 @@ protocol::Response InspectorDOMAgent::getFrameOwner(
+       break;
+     }
+ 
+-    if (IsA<LocalFrame>(frame)) {
++    if (false && IsA<LocalFrame>(frame)) {
+       if (auto* fenced_frames = DocumentFencedFrames::Get(
+               *To<LocalFrame>(frame)->GetDocument())) {
+         for (HTMLFencedFrameElement* ff : fenced_frames->GetFencedFrames()) {
+diff --git a/third_party/blink/renderer/core/loader/document_loader.h b/third_party/blink/renderer/core/loader/document_loader.h
+index 8328adb3dfc..cb171e1d58b 100644
+--- a/third_party/blink/renderer/core/loader/document_loader.h
++++ b/third_party/blink/renderer/core/loader/document_loader.h
+@@ -39,13 +39,11 @@
+ #include "mojo/public/cpp/bindings/shared_remote.h"
+ #include "services/metrics/public/cpp/ukm_source_id.h"
+ #include "third_party/abseil-cpp/absl/types/optional.h"
+-#include "third_party/blink/public/common/fenced_frame/redacted_fenced_frame_config.h"
+ #include "third_party/blink/public/common/frame/view_transition_state.h"
+ #include "third_party/blink/public/common/loader/loading_behavior_flag.h"
+ #include "third_party/blink/public/common/permissions_policy/document_policy.h"
+ #include "third_party/blink/public/common/permissions_policy/permissions_policy.h"
+ #include "third_party/blink/public/common/subresource_load_metrics.h"
+-#include "third_party/blink/public/mojom/fenced_frame/fenced_frame.mojom-blink.h"
+ #include "third_party/blink/public/mojom/frame/triggering_event_info.mojom-blink-forward.h"
+ #include "third_party/blink/public/mojom/loader/content_security_notifier.mojom-blink.h"
+ #include "third_party/blink/public/mojom/loader/mhtml_load_result.mojom-blink-forward.h"
+@@ -794,6 +792,7 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
+   // If this is a navigation to fenced frame from an interest group auction,
+   // contains URNs to the ad components returned by the winning bid. Null,
+   // otherwise.
++  // ?
+   absl::optional<Vector<KURL>> ad_auction_components_;
+ 
+   std::unique_ptr<ExtraData> extra_data_;
+diff --git a/third_party/blink/renderer/core/loader/frame_fetch_context.cc b/third_party/blink/renderer/core/loader/frame_fetch_context.cc
+index 1eb674b2997..7fe4b5aac5f 100644
+--- a/third_party/blink/renderer/core/loader/frame_fetch_context.cc
++++ b/third_party/blink/renderer/core/loader/frame_fetch_context.cc
+@@ -39,7 +39,6 @@
+ #include "build/build_config.h"
+ #include "mojo/public/cpp/bindings/associated_remote.h"
+ #include "net/http/structured_headers.h"
+-#include "services/network/public/cpp/attribution_reporting_runtime_features.h"
+ #include "services/network/public/cpp/client_hints.h"
+ #include "services/network/public/cpp/features.h"
+ #include "services/network/public/mojom/web_client_hints_types.mojom-blink.h"
+@@ -65,7 +64,6 @@
+ #include "third_party/blink/renderer/core/dom/document.h"
+ #include "third_party/blink/renderer/core/fileapi/public_url_manager.h"
+ #include "third_party/blink/renderer/core/frame/ad_tracker.h"
+-#include "third_party/blink/renderer/core/frame/attribution_src_loader.h"
+ #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
+ #include "third_party/blink/renderer/core/frame/deprecation/deprecation.h"
+ #include "third_party/blink/renderer/core/frame/frame_console.h"
+@@ -340,6 +338,7 @@ void FrameFetchContext::PrepareRequest(
+   if (document_loader_->ForceFetchCacheMode())
+     request.SetCacheMode(*document_loader_->ForceFetchCacheMode());
+ 
++  /*
+   if (const AttributionSrcLoader* attribution_src_loader =
+           GetFrame()->GetAttributionSrcLoader()) {
+     request.SetAttributionReportingSupport(
+@@ -357,6 +356,7 @@ void FrameFetchContext::PrepareRequest(
+       request.SetSharedStorageWritable(false);
+     }
+   }
++  */
+ 
+   request.SetSharedDictionaryWriterEnabled(
+       RuntimeEnabledFeatures::CompressionDictionaryTransportEnabled(
+diff --git a/third_party/blink/renderer/core/loader/image_loader.cc b/third_party/blink/renderer/core/loader/image_loader.cc
+index c647f154a13..7e5b8b6c351 100644
+--- a/third_party/blink/renderer/core/loader/image_loader.cc
++++ b/third_party/blink/renderer/core/loader/image_loader.cc
+@@ -25,7 +25,6 @@
+ #include <memory>
+ #include <utility>
+ 
+-#include "services/network/public/mojom/attribution.mojom-blink.h"
+ #include "services/network/public/mojom/web_client_hints_types.mojom-blink.h"
+ #include "third_party/blink/public/mojom/fetch/fetch_api_request.mojom-blink.h"
+ #include "third_party/blink/public/platform/web_url_request.h"
+@@ -40,7 +39,6 @@
+ #include "third_party/blink/renderer/core/dom/events/event.h"
+ #include "third_party/blink/renderer/core/dom/increment_load_event_delay_count.h"
+ #include "third_party/blink/renderer/core/execution_context/agent.h"
+-#include "third_party/blink/renderer/core/frame/attribution_src_loader.h"
+ #include "third_party/blink/renderer/core/frame/frame_owner.h"
+ #include "third_party/blink/renderer/core/frame/local_frame.h"
+ #include "third_party/blink/renderer/core/frame/local_frame_client.h"
+@@ -514,16 +512,18 @@ void ImageLoader::DoUpdateFromElement(
+     DCHECK(document.GetFrame());
+     auto* frame = document.GetFrame();
+ 
++    /*
+     if (IsA<HTMLImageElement>(GetElement())) {
+       if (GetElement()->FastHasAttribute(html_names::kAttributionsrcAttr) &&
+           frame->GetAttributionSrcLoader()->CanRegister(
+               url, To<HTMLImageElement>(GetElement()),
+-              /*request_id=*/absl::nullopt)) {
++              /*request_id=*absl::nullopt)) {
+         resource_request.SetAttributionReportingEligibility(
+             network::mojom::AttributionReportingEligibility::
+                 kEventSourceOrTrigger);
+       }
+-      bool shared_storage_writable =
++      bool shared_storage_writable = false;
++      /*
+           GetElement()->FastHasAttribute(
+               html_names::kSharedstoragewritableAttr) &&
+           RuntimeEnabledFeatures::SharedStorageAPIM118Enabled(
+@@ -531,6 +531,7 @@ void ImageLoader::DoUpdateFromElement(
+           GetElement()->GetExecutionContext()->IsSecureContext();
+       resource_request.SetSharedStorageWritable(shared_storage_writable);
+     }
++    */
+ 
+     bool page_is_being_dismissed =
+         document.PageDismissalEventBeingDispatched() != Document::kNoDismissal;
+diff --git a/third_party/blink/renderer/core/loader/resource_load_observer_for_frame.cc b/third_party/blink/renderer/core/loader/resource_load_observer_for_frame.cc
+index 5855bbbc0e0..869f0edbe4e 100644
+--- a/third_party/blink/renderer/core/loader/resource_load_observer_for_frame.cc
++++ b/third_party/blink/renderer/core/loader/resource_load_observer_for_frame.cc
+@@ -14,7 +14,6 @@
+ #include "third_party/blink/renderer/core/core_probes_inl.h"
+ #include "third_party/blink/renderer/core/dom/events/event_target.h"
+ #include "third_party/blink/renderer/core/execution_context/agent.h"
+-#include "third_party/blink/renderer/core/frame/attribution_src_loader.h"
+ #include "third_party/blink/renderer/core/frame/deprecation/deprecation.h"
+ #include "third_party/blink/renderer/core/frame/frame_console.h"
+ #include "third_party/blink/renderer/core/frame/local_dom_window.h"
+@@ -159,8 +158,10 @@ void ResourceLoadObserverForFrame::WillSendRequest(
+                                   mojom::blink::WebFeature::kExpectCTHeader);
+   }
+ 
++  /*
+   frame->GetAttributionSrcLoader()->MaybeRegisterAttributionHeaders(
+       request, redirect_response, resource);
++  */
+ 
+   probe::WillSendRequest(
+       GetProbe(), document_loader_,
+diff --git a/third_party/blink/renderer/core/origin_trials/origin_trial_context.cc b/third_party/blink/renderer/core/origin_trials/origin_trial_context.cc
+index d35dffa051d..696b8633eb0 100644
+--- a/third_party/blink/renderer/core/origin_trials/origin_trial_context.cc
++++ b/third_party/blink/renderer/core/origin_trials/origin_trial_context.cc
+@@ -559,6 +559,7 @@ bool OriginTrialContext::CanEnableTrialFromName(const StringView& trial_name) {
+ 
+ Vector<OriginTrialFeature> OriginTrialContext::RestrictedFeaturesForTrial(
+     const String& trial_name) {
++  /*
+   if (trial_name == "PrivacySandboxAdsAPIs") {
+     Vector<OriginTrialFeature> restricted;
+     if (!base::FeatureList::IsEnabled(features::kInterestGroupStorage))
+@@ -585,10 +586,12 @@ Vector<OriginTrialFeature> OriginTrialContext::RestrictedFeaturesForTrial(
+       restricted.push_back(OriginTrialFeature::kFencedFramesAPIChanges);
+     return restricted;
+   }
++  */
+ 
+   return {};
+ }
+ 
++// ?
+ OriginTrialFeaturesEnabled OriginTrialContext::EnableTrialFromName(
+     const String& trial_name,
+     base::Time expiry_time) {
+diff --git a/third_party/blink/renderer/core/page/context_menu_controller.cc b/third_party/blink/renderer/core/page/context_menu_controller.cc
+index d7e8edf3b57..141b39d247e 100644
+--- a/third_party/blink/renderer/core/page/context_menu_controller.cc
++++ b/third_party/blink/renderer/core/page/context_menu_controller.cc
+@@ -61,7 +61,6 @@
+ #include "third_party/blink/renderer/core/events/mouse_event.h"
+ #include "third_party/blink/renderer/core/exported/web_plugin_container_impl.h"
+ #include "third_party/blink/renderer/core/fragment_directive/text_fragment_handler.h"
+-#include "third_party/blink/renderer/core/frame/attribution_src_loader.h"
+ #include "third_party/blink/renderer/core/frame/local_dom_window.h"
+ #include "third_party/blink/renderer/core/frame/local_frame.h"
+ #include "third_party/blink/renderer/core/frame/picture_in_picture_controller.h"
+@@ -809,6 +808,7 @@ bool ContextMenuController::ShowContextMenu(LocalFrame* frame,
+ 
+     data.link_text = anchor->innerText().Utf8();
+ 
++    /*
+     if (const AtomicString& attribution_src_value =
+             anchor->FastGetAttribute(html_names::kAttributionsrcAttr);
+         !attribution_src_value.IsNull()) {
+@@ -821,14 +821,15 @@ bool ContextMenuController::ShowContextMenu(LocalFrame* frame,
+         if (AttributionSrcLoader* attribution_src_loader =
+                 selected_frame->GetAttributionSrcLoader();
+             attribution_src_loader->CanRegister(result.AbsoluteLinkURL(),
+-                                                /*element=*/anchor,
+-                                                /*request_id=*/absl::nullopt)) {
++                                                /*element=*anchor,
++                                                /*request_id=*absl::nullopt)) {
+           data.impression = blink::Impression{
+               .runtime_features = attribution_src_loader->GetRuntimeFeatures(),
+           };
+         }
+       }
+     }
++    */
+   }
+ 
+   SetInputFieldsData(result.InnerElement(), data);
+diff --git a/third_party/blink/renderer/core/permissions_policy/permissions_policy_features.json5 b/third_party/blink/renderer/core/permissions_policy/permissions_policy_features.json5
+index 8066dafa639..8117742625d 100644
+--- a/third_party/blink/renderer/core/permissions_policy/permissions_policy_features.json5
++++ b/third_party/blink/renderer/core/permissions_policy/permissions_policy_features.json5
+@@ -65,12 +65,6 @@
+       permissions_policy_name: "ambient-light-sensor",
+       depends_on: ["SensorExtraClasses"],
+     },
+-    {
+-      name: "AttributionReporting",
+-      permissions_policy_name: "attribution-reporting",
+-      feature_default: "EnableForAll",
+-      depends_on: ["AttributionReporting", "AttributionReportingCrossAppWeb"],
+-    },
+     {
+       name: "Autoplay",
+       permissions_policy_name: "autoplay",
+@@ -80,18 +74,6 @@
+       permissions_policy_name: "bluetooth",
+       depends_on: ["WebBluetooth"],
+     },
+-    {
+-      name: "BrowsingTopics",
+-      permissions_policy_name: "browsing-topics",
+-      feature_default: "EnableForAll",
+-      depends_on: ["TopicsAPI"],
+-    },
+-    {
+-      name: "BrowsingTopicsBackwardCompatible",
+-      permissions_policy_name: "interest-cohort",
+-      feature_default: "EnableForAll",
+-      depends_on: ["TopicsAPI"],
+-    },
+     {
+       name: "Camera",
+       permissions_policy_name: "camera",
+@@ -322,12 +304,6 @@
+       permissions_policy_name: "picture-in-picture",
+       feature_default: "EnableForAll",
+     },
+-    {
+-      name: "PrivateAggregation",
+-      permissions_policy_name: "private-aggregation",
+-      feature_default: "EnableForAll",
+-      depends_on: ["SharedStorageAPI", "Fledge"],
+-    },
+     {
+       name: "PrivateStateTokenIssuance",
+       permissions_policy_name: "private-state-token-issuance",
+@@ -337,15 +313,6 @@
+       name: "PublicKeyCredentialsGet",
+       permissions_policy_name: "publickey-credentials-get",
+     },
+-    {
+-      name: "RunAdAuction",
+-      permissions_policy_name: "run-ad-auction",
+-      feature_default: "EnableForAll",
+-      depends_on: ["Fledge"],
+-      default_value_behind_flag: [
+-        ["AdInterestGroupAPIRestrictedPolicyByDefault", "EnableForSelf"],
+-      ],
+-    },
+     {
+       name: "ScreenWakeLock",
+       permissions_policy_name: "screen-wake-lock",
+@@ -361,18 +328,6 @@
+       permissions_policy_name: "shared-autofill",
+       depends_on: ["SharedAutofill"],
+     },
+-    {
+-      name: "SharedStorage",
+-      permissions_policy_name: "shared-storage",
+-      feature_default: "EnableForAll",
+-      depends_on: ["SharedStorageAPI"],
+-    },
+-    {
+-      name: "SharedStorageSelectUrl",
+-      permissions_policy_name: "shared-storage-select-url",
+-      feature_default: "EnableForAll",
+-      depends_on: ["SharedStorageAPI"],
+-    },
+     {
+       name: "SmartCard",
+       permissions_policy_name: "smart-card",
+diff --git a/third_party/blink/renderer/core/script/script_loader.cc b/third_party/blink/renderer/core/script/script_loader.cc
+index 0c2bb469e0b..efb3b4cf17f 100644
+--- a/third_party/blink/renderer/core/script/script_loader.cc
++++ b/third_party/blink/renderer/core/script/script_loader.cc
+@@ -38,7 +38,6 @@
+ #include "third_party/blink/renderer/core/dom/events/event.h"
+ #include "third_party/blink/renderer/core/dom/scriptable_document_parser.h"
+ #include "third_party/blink/renderer/core/dom/text.h"
+-#include "third_party/blink/renderer/core/frame/attribution_src_loader.h"
+ #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
+ #include "third_party/blink/renderer/core/frame/local_dom_window.h"
+ #include "third_party/blink/renderer/core/frame/local_frame.h"
+@@ -87,6 +86,7 @@
+ #include "third_party/blink/renderer/platform/wtf/text/string_hash.h"
+ #include "third_party/blink/renderer/platform/wtf/text/string_view.h"
+ 
++/*
+ namespace {
+ blink::scheduler::TaskAttributionInfo* GetRunningTask(
+     blink::ScriptState* script_state) {
+@@ -99,6 +99,8 @@ blink::scheduler::TaskAttributionInfo* GetRunningTask(
+ }
+ 
+ }  // namespace
++*/
++
+ namespace blink {
+ 
+ ScriptLoader::ScriptLoader(ScriptElementBase* element,
+@@ -816,14 +818,16 @@ PendingScript* ScriptLoader::PrepareScript(
+     }
+ 
+     // TODO(apaseltiner): Propagate the element instead of passing nullptr.
++    /*
+     if (element_->HasAttributionsrcAttribute() &&
+         context_window->GetFrame()->GetAttributionSrcLoader()->CanRegister(
+             url,
+-            /*element=*/nullptr,
+-            /*request_id=*/absl::nullopt)) {
++            /*element=*nullptr,
++            /*request_id=*absl::nullopt)) {
+       options.SetAttributionReportingEligibility(
+           ScriptFetchOptions::AttributionReportingEligibility::kEligible);
+     }
++    */
+ 
+     // <spec step="29.6">If el is potentially render-blocking, then block
+     // rendering on el.</spec>
+diff --git a/third_party/blink/renderer/core/xmlhttprequest/xml_http_request.idl b/third_party/blink/renderer/core/xmlhttprequest/xml_http_request.idl
+index 41d15d87d3e..c0c56d8d505 100644
+--- a/third_party/blink/renderer/core/xmlhttprequest/xml_http_request.idl
++++ b/third_party/blink/renderer/core/xmlhttprequest/xml_http_request.idl
+@@ -61,10 +61,8 @@ typedef (Blob or BufferSource or FormData or URLSearchParams or USVString) XMLHt
+     [RaisesException] void open(ByteString method, USVString url, boolean async, optional USVString? username = null, optional USVString? password = null);
+     [RaisesException] void setRequestHeader(ByteString name, ByteString value);
+     [RaisesException, RuntimeEnabled=PrivateStateTokens, SecureContext, MeasureAs=TrustTokenXhr] void setPrivateToken(PrivateToken privateToken);
+-    [RaisesException, RuntimeEnabled=AttributionReportingInterface, SecureContext] void setAttributionReporting(AttributionReportingRequestOptions attributionReporting);
+     [RaisesException=Setter] attribute unsigned long timeout;
+     [RaisesException=Setter] attribute boolean withCredentials;
+-    [RuntimeEnabled=TopicsXHR, SecureContext, Exposed=Window] attribute boolean deprecatedBrowsingTopics;
+     readonly attribute XMLHttpRequestUpload upload;
+     [RaisesException] void send(optional (Document or XMLHttpRequestBodyInit)? body = null);
+     void abort();
+diff --git a/third_party/blink/renderer/modules/accessibility/ax_node_object.cc b/third_party/blink/renderer/modules/accessibility/ax_node_object.cc
+index c3e29b35a62..28992aef1c7 100644
+--- a/third_party/blink/renderer/modules/accessibility/ax_node_object.cc
++++ b/third_party/blink/renderer/modules/accessibility/ax_node_object.cc
+@@ -71,7 +71,6 @@
+ #include "third_party/blink/renderer/core/html/canvas/html_canvas_element.h"
+ #include "third_party/blink/renderer/core/html/canvas/image_data.h"
+ #include "third_party/blink/renderer/core/html/custom/element_internals.h"
+-#include "third_party/blink/renderer/core/html/fenced_frame/html_fenced_frame_element.h"
+ #include "third_party/blink/renderer/core/html/forms/html_button_element.h"
+ #include "third_party/blink/renderer/core/html/forms/html_field_set_element.h"
+ #include "third_party/blink/renderer/core/html/forms/html_form_control_element.h"
+diff --git a/third_party/blink/renderer/modules/accessibility/ax_object.cc b/third_party/blink/renderer/modules/accessibility/ax_object.cc
+index 3dc62f53a28..905f7c78a94 100644
+--- a/third_party/blink/renderer/modules/accessibility/ax_object.cc
++++ b/third_party/blink/renderer/modules/accessibility/ax_object.cc
+@@ -62,7 +62,6 @@
+ #include "third_party/blink/renderer/core/fullscreen/fullscreen.h"
+ #include "third_party/blink/renderer/core/html/canvas/html_canvas_element.h"
+ #include "third_party/blink/renderer/core/html/custom/element_internals.h"
+-#include "third_party/blink/renderer/core/html/fenced_frame/html_fenced_frame_element.h"
+ #include "third_party/blink/renderer/core/html/forms/html_form_control_element.h"
+ #include "third_party/blink/renderer/core/html/forms/html_input_element.h"
+ #include "third_party/blink/renderer/core/html/forms/html_opt_group_element.h"
+@@ -7022,7 +7021,6 @@ bool AXObject::IsFrame(const Node* node) {
+   switch (frame_owner->OwnerType()) {
+     case FrameOwnerElementType::kIframe:
+     case FrameOwnerElementType::kFrame:
+-    case FrameOwnerElementType::kFencedframe:
+       return true;
+     case FrameOwnerElementType::kObject:
+     case FrameOwnerElementType::kEmbed:
+diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
+index f29536905eb..a25726792f8 100644
+--- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
++++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
+@@ -291,13 +291,6 @@
+       implied_by: ["CorsRFC1918"],
+       base_feature: "none",
+     },
+-    {
+-      // Interest Group JS API/runtimeflag.
+-      name: "AdInterestGroupAPI",
+-      origin_trial_feature_name: "AdInterestGroupAPI",
+-      implied_by: ["Fledge", "Parakeet"],
+-      public: true,
+-    },
+     {
+       name: "AdTagging",
+       public: true,
+@@ -337,31 +330,6 @@
+       status: "experimental",
+       base_feature: "none",
+     },
+-    {
+-      name: "AttributionReporting",
+-      origin_trial_feature_name: "PrivacySandboxAdsAPIs",
+-      origin_trial_allows_third_party: true,
+-      status: "experimental",
+-      base_feature: "none",
+-      public: true,
+-    },
+-    {
+-      name: "AttributionReportingCrossAppWeb",
+-      origin_trial_feature_name: "AttributionReportingCrossAppWeb",
+-      origin_trial_allows_third_party: true,
+-      base_feature: "none",
+-    },
+-    {
+-      // This only exists so we can use RuntimeEnabled in the IDL file
+-      // when either implied_by flag is enabled.
+-      name: "AttributionReportingInterface",
+-      // This is not going into origin trial, "origin_trial_feature_name" is
+-      // required for using the "implied_by" behaviour.
+-      origin_trial_feature_name: "AttributionReportingInterface",
+-      origin_trial_allows_third_party: true,
+-      implied_by: ["AttributionReporting", "AttributionReportingCrossAppWeb"],
+-      base_feature: "none",
+-    },
+     {
+       name: "AudioContextSetSinkId",
+       status: "stable",
+@@ -1658,33 +1626,6 @@
+       public: true,
+       base_feature: "none",
+     },
+-    {
+-      name: "FencedFrames",
+-      base_feature: "none",
+-      // This helps enable and expose the <fencedframe> element, but note that
+-      // blink::features::kFencedFrames must be enabled as well, similar to
+-      // Portals, as we require the support of the browser process to fully
+-      // enable the feature. Enabling this runtime enabled feature alone has no
+-      // effect.
+-      origin_trial_feature_name: "PrivacySandboxAdsAPIs",
+-      origin_trial_allows_third_party: true,
+-      public: true,
+-    },
+-    {
+-      name: "FencedFramesAPIChanges",
+-      // Various new IDL attributes on the <fencedframe> element (such as
+-      // `config`, `sandbox`, and `allow`).
+-      origin_trial_feature_name: "PrivacySandboxAdsAPIs",
+-      origin_trial_allows_third_party: true,
+-      base_feature_status: "enabled",
+-      copied_from_base_feature_if: "enabled_or_overridden",
+-    },
+-    {
+-      name: "FencedFramesDefaultMode",
+-      base_feature_status: "disabled",
+-      copied_from_base_feature_if: "enabled_or_overridden",
+-      public: true,
+-    },
+     {
+       // The Blink runtime-enabled feature name for the API's IDL.
+       name: "FetchLaterAPI",
+@@ -1773,26 +1714,6 @@
+       name: "FixOffsetInMultiColVerticalRl",
+       status: "stable",
+     },
+-    {
+-      name: "Fledge",
+-      base_feature: "none",
+-      origin_trial_feature_name: "PrivacySandboxAdsAPIs",
+-      origin_trial_allows_third_party: true,
+-      public: true,
+-    },
+-    {
+-      name: "FledgeBiddingAndAuctionServerAPI",
+-      origin_trial_feature_name: "FledgeBiddingAndAuctionServer",
+-      origin_trial_allows_third_party: true,
+-    },
+-    {
+-      name: "FledgeDirectFromSellerSignalsHeaderAdSlot",
+-      status: "test",
+-    },
+-    {
+-      name: "FledgeNegativeTargeting",
+-      status: "test",
+-    },
+     {
+       name: "FluentScrollbars",
+       base_feature: "none",
+@@ -2114,10 +2035,6 @@
+       status: "stable",
+       base_feature: "none",
+     },
+-    {
+-      name: "InteroperablePrivateAttribution",
+-      status: "experimental",
+-    },
+     {
+       name: "IntersectionOptimization",
+       status: "experimental",
+@@ -2765,11 +2682,6 @@
+       base_feature: "none",
+       settable_from_internals: true,
+     },
+-    {
+-      // PARAKEET ad serving runtime flag/JS API.
+-      name: "Parakeet",
+-      origin_trial_feature_name: "Parakeet",
+-    },
+     {
+       name: "PartitionedCookies",
+       base_feature: "none",
+@@ -2974,14 +2886,6 @@
+       name:"PrettyPrintJSONDocument",
+       status: "stable",
+     },
+-    // The RTE feature encompasses multiple APIs, including: Attribution
+-    // Reporting, FLEDGE, Topics and Fenced Frames.
+-    {
+-      name: "PrivacySandboxAdsAPIs",
+-      base_feature: "none",
+-      origin_trial_feature_name: "PrivacySandboxAdsAPIs",
+-      origin_trial_allows_third_party: true,
+-    },
+     {
+       name: "PrivateNetworkAccessNonSecureContextsAllowed",
+       origin_trial_feature_name: "PrivateNetworkAccessNonSecureContextsAllowed",
+@@ -3393,18 +3297,6 @@
+       status: "test",
+       base_feature: "none",
+     },
+-    {
+-      name: "SharedStorageAPI",
+-      base_feature: "none",
+-      origin_trial_feature_name: "PrivacySandboxAdsAPIs",
+-      origin_trial_allows_third_party: true,
+-      public: true,
+-    },
+-    {
+-      name: "SharedStorageAPIM118",
+-      base_feature: "none",
+-      public: true,
+-    },
+     {
+       name: "SharedWorker",
+       public: true,
+@@ -3714,27 +3606,6 @@
+       status: "experimental",
+       base_feature: "none",
+     },
+-    {
+-      name: "TopicsAPI",
+-      base_feature: "none",
+-      origin_trial_feature_name: "PrivacySandboxAdsAPIs",
+-      origin_trial_allows_third_party: true,
+-      public: true,
+-    },
+-    {
+-      name: "TopicsDocumentAPI",
+-      base_feature: "none",
+-      origin_trial_feature_name: "PrivacySandboxAdsAPIs",
+-      origin_trial_allows_third_party: true,
+-      public: true,
+-    },
+-    {
+-      name: "TopicsXHR",
+-      base_feature: "none",
+-      origin_trial_feature_name: "PrivacySandboxAdsAPIs",
+-      origin_trial_allows_third_party: true,
+-      public: true,
+-    },
+     // This feature allows touch dragging and a context menu to occur
+     // simultaneously, with the assumption that the menu is non-modal.  Without
+     // this feature, a long-press touch gesture can start either a drag or a

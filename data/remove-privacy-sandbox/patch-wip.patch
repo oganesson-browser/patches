@@ -348,6 +348,63 @@ index ae4626e7ace..00be67bd005 100644
  }
  
  }  // namespace
+diff --git a/third_party/blink/public/mojom/permissions_policy/permissions_policy_feature.mojom b/third_party/blink/public/mojom/permissions_policy/permissions_policy_feature.mojom
+index 50297723ffb..c9f1b4f18fb 100644
+--- a/third_party/blink/public/mojom/permissions_policy/permissions_policy_feature.mojom
++++ b/third_party/blink/public/mojom/permissions_policy/permissions_policy_feature.mojom
+@@ -154,13 +154,13 @@ enum PermissionsPolicyFeature {
+   //
+   // See https://github.com/WICG/turtledove/blob/main/FLEDGE.md#21-initiating-an-on-device-auction
+   // for the API.
+-  kRunAdAuction = 91,
++  // kRunAdAuction = 91,
+ 
+   // Controls FLEDGE's joinAdInterestGroup and updateAdInterestGroups APIs.
+   //
+   // See https://github.com/WICG/turtledove/blob/main/FLEDGE.md#11-joining-interest-groups
+   // for the API.
+-  kJoinAdInterestGroup = 92,
++  // kJoinAdInterestGroup = 92,
+ 
+   // Client Hint for the full version for each brand.
+   kClientHintUAFullVersionList = 93,
+@@ -172,11 +172,11 @@ enum PermissionsPolicyFeature {
+ 
+   // "browsing-topics" permissions policy that controls the use of Topics API.
+   // https://github.com/jkarlin/topics
+-  kBrowsingTopics = 97,
++  // kBrowsingTopics = 97,
+ 
+   // "interest-cohort" permissions policy that controls the use of Topics API.
+   // https://github.com/jkarlin/topics
+-  kBrowsingTopicsBackwardCompatible = 98,
++  // kBrowsingTopicsBackwardCompatible = 98,
+ 
+   // Client Hint for Save-Data.
+   kClientHintSaveData = 99,
+@@ -193,7 +193,7 @@ enum PermissionsPolicyFeature {
+ 
+   // "shared-storage" permissions policy that controls the use of Shared Storage
+   // API.
+-  kSharedStorage = 103,
++  // kSharedStorage = 103,
+ 
+   // Controls use of unload handlers.
+   kUnload = 104,
+@@ -210,11 +210,11 @@ enum PermissionsPolicyFeature {
+ 
+   // "shared-storage-select-url" permissions policy that controls the use of
+   // sharedStorage.selectURL().
+-  kSharedStorageSelectUrl = 108,
++  // kSharedStorageSelectUrl = 108,
+ 
+   // "private-aggregation" permissions policy that controls the use of
+   // privateAggregation within the shared storage worklet.
+-  kPrivateAggregation = 109,
++  // kPrivateAggregation = 109,
+ 
+   // Private State Tokens API issuance operation
+   kPrivateStateTokenIssuance = 110,
 diff --git a/third_party/blink/renderer/bindings/generated_in_core.gni b/third_party/blink/renderer/bindings/generated_in_core.gni
 index ac13a1e9452..e947c09f9ac 100644
 --- a/third_party/blink/renderer/bindings/generated_in_core.gni

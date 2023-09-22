@@ -942,19 +942,6 @@ index a723affd3fb..49d356acb8e 100644
    "forms/base_button_input_type.cc",
    "forms/base_button_input_type.h",
    "forms/base_checkable_input_type.cc",
-diff --git a/third_party/blink/renderer/core/html/custom/element_internals.cc b/third_party/blink/renderer/core/html/custom/element_internals.cc
-index 87ec3607916..3ec5ae5ccef 100644
---- a/third_party/blink/renderer/core/html/custom/element_internals.cc
-+++ b/third_party/blink/renderer/core/html/custom/element_internals.cc
-@@ -290,6 +290,8 @@ ShadowRoot* ElementInternals::shadowRoot() const {
- 
- const AtomicString& ElementInternals::FastGetAttribute(
-     const QualifiedName& attribute) const {
-+  if (attribute == html_names::kAttributionsrcAttr)
-+    return g_null_atom;
-   const auto it = accessibility_semantics_map_.find(attribute);
-   if (it == accessibility_semantics_map_.end())
-     return g_null_atom;
 diff --git a/third_party/blink/renderer/core/html/html_anchor_element.cc b/third_party/blink/renderer/core/html/html_anchor_element.cc
 index d1b3c908c29..2bc6c617995 100644
 --- a/third_party/blink/renderer/core/html/html_anchor_element.cc

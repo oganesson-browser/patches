@@ -248,6 +248,21 @@ index f3a9f07786e..46eb008be22 100644
      "isolated_origin_util.cc",
      "isolated_origin_util.h",
      "isolation_context.cc",
+diff --git a/content/browser/renderer_host/navigation_request.cc b/content/browser/renderer_host/navigation_request.cc
+index a33c756df64..e0d0251a782 100644
+--- a/content/browser/renderer_host/navigation_request.cc
++++ b/content/browser/renderer_host/navigation_request.cc
+@@ -163,10 +163,6 @@
+ #include "third_party/blink/public/common/chrome_debug_urls.h"
+ #include "third_party/blink/public/common/client_hints/client_hints.h"
+ #include "third_party/blink/public/common/features.h"
+-#include "third_party/blink/public/common/fenced_frame/fenced_frame_utils.h"
+-#include "third_party/blink/public/common/fenced_frame/redacted_fenced_frame_config.h"
+-#include "third_party/blink/public/common/frame/fenced_frame_permissions_policies.h"
+-#include "third_party/blink/public/common/frame/fenced_frame_sandbox_flags.h"
+ #include "third_party/blink/public/common/frame/frame_owner_element_type.h"
+ #include "third_party/blink/public/common/navigation/navigation_params_mojom_traits.h"
+ #include "third_party/blink/public/common/navigation/navigation_policy.h"
 diff --git a/content/browser/renderer_host/render_frame_host_impl.h b/content/browser/renderer_host/render_frame_host_impl.h
 index 0dcd99adfe9..fa33b8260aa 100644
 --- a/content/browser/renderer_host/render_frame_host_impl.h
@@ -348,6 +363,30 @@ index ae4626e7ace..00be67bd005 100644
  }
  
  }  // namespace
+diff --git a/third_party/blink/public/common/BUILD.gn b/third_party/blink/public/common/BUILD.gn
+index 8bd2c0c0ccf..5b4e98b510c 100644
+--- a/third_party/blink/public/common/BUILD.gn
++++ b/third_party/blink/public/common/BUILD.gn
+@@ -164,7 +164,6 @@ source_set("headers") {
+     "fetch/fetch_api_request_headers_mojom_traits.h",
+     "forcedark/forcedark_switches.h",
+     "frame/delegated_capability_request_token.h",
+-    "frame/fenced_frame_permissions_policies.h",
+     "frame/fenced_frame_sandbox_flags.h",
+     "frame/frame_ad_evidence.h",
+     "frame/frame_owner_element_type.h",
+diff --git a/third_party/blink/public/common/frame/frame_owner_element_type.h b/third_party/blink/public/common/frame/frame_owner_element_type.h
+index 3533b46f5b1..3eff63e60c5 100644
+--- a/third_party/blink/public/common/frame/frame_owner_element_type.h
++++ b/third_party/blink/public/common/frame/frame_owner_element_type.h
+@@ -15,6 +15,7 @@ enum class FrameOwnerElementType {
+   kEmbed,
+   kFrame,
+   kPortal,
++  // TODO
+   kFencedframe,
+   kMaxValue = kFencedframe,
+ };
 diff --git a/third_party/blink/public/mojom/permissions_policy/permissions_policy_feature.mojom b/third_party/blink/public/mojom/permissions_policy/permissions_policy_feature.mojom
 index 50297723ffb..c9f1b4f18fb 100644
 --- a/third_party/blink/public/mojom/permissions_policy/permissions_policy_feature.mojom

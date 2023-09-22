@@ -990,6 +990,18 @@ index 0e7860050f1..6520bacb61e 100644
  
 -HTMLAnchorElement includes HTMLAttributionSrcElementUtils;
  HTMLAnchorElement includes HTMLHyperlinkElementUtils;
+diff --git a/third_party/blink/renderer/core/html/html_attribute_names.json5 b/third_party/blink/renderer/core/html/html_attribute_names.json5
+index 27b5cb25984..e9e7fd187d9 100644
+--- a/third_party/blink/renderer/core/html/html_attribute_names.json5
++++ b/third_party/blink/renderer/core/html/html_attribute_names.json5
+@@ -23,7 +23,6 @@
+     "archive",
+     "as",
+     "async",
+-    "attributionsrc",
+     "autocapitalize",
+     "autocomplete",
+     "autocorrect",
 diff --git a/third_party/blink/renderer/core/html/html_iframe_element.cc b/third_party/blink/renderer/core/html/html_iframe_element.cc
 index 6f6be4bbdaa..37b20fa3da7 100644
 --- a/third_party/blink/renderer/core/html/html_iframe_element.cc
@@ -1157,6 +1169,26 @@ index 2f2fad8285c..bac067a5c13 100644
 -
 -// https://wicg.github.io/attribution-reporting-api
 -HTMLScriptElement includes HTMLAttributionSrcElementUtils;
+diff --git a/third_party/blink/renderer/core/html/html_tag_names.json5 b/third_party/blink/renderer/core/html/html_tag_names.json5
+index 5ca6b7b0cc1..3fdac290430 100644
+--- a/third_party/blink/renderer/core/html/html_tag_names.json5
++++ b/third_party/blink/renderer/core/html/html_tag_names.json5
+@@ -157,15 +157,6 @@
+       name: "embed",
+       constructorNeedsCreateElementFlags: true,
+     },
+-    {
+-      name: "fencedframe",
+-      interfaceName: "HTMLFencedFrameElement",
+-      interfaceHeaderDir: "third_party/blink/renderer/core/html/fenced_frame",
+-      runtimeEnabled: "FencedFrames",
+-      // This element could be enabled in some documents but not others (due to
+-      // origin trials), so we need custom type helpers.
+-      noTypeHelpers: true,
+-    },
+     {
+       name: "fieldset",
+       interfaceName: "HTMLFieldSetElement",
 diff --git a/third_party/blink/renderer/core/html/parser/preload_request.cc b/third_party/blink/renderer/core/html/parser/preload_request.cc
 index e4506803247..bca9503d31d 100644
 --- a/third_party/blink/renderer/core/html/parser/preload_request.cc

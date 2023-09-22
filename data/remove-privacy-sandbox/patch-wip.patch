@@ -1698,15 +1698,16 @@ index 0c2bb469e0b..45a2ea166f0 100644
      // <spec step="29.6">If el is potentially render-blocking, then block
      // rendering on el.</spec>
 diff --git a/third_party/blink/renderer/core/timing/window_performance.cc b/third_party/blink/renderer/core/timing/window_performance.cc
-index 2c626c25e3e..f0a25e6e81c 100644
+index 2c626c25e3e..868ac7c9a36 100644
 --- a/third_party/blink/renderer/core/timing/window_performance.cc
 +++ b/third_party/blink/renderer/core/timing/window_performance.cc
-@@ -120,8 +120,6 @@ AtomicString GetFrameOwnerType(HTMLFrameOwnerElement* frame_owner) {
-       return html_names::kFrameTag.LocalName();
+@@ -121,7 +121,8 @@ AtomicString GetFrameOwnerType(HTMLFrameOwnerElement* frame_owner) {
      case FrameOwnerElementType::kPortal:
        return html_names::kPortalTag.LocalName();
--    case FrameOwnerElementType::kFencedframe:
+     case FrameOwnerElementType::kFencedframe:
 -      return html_names::kFencedframeTag.LocalName();
++      // TODO
++      return html_names::kEmbedTag.LocalName();
    }
    NOTREACHED();
    return g_empty_atom;

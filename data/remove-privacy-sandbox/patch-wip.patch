@@ -978,7 +978,7 @@ index 0e7860050f1..6520bacb61e 100644
 -HTMLAnchorElement includes HTMLAttributionSrcElementUtils;
  HTMLAnchorElement includes HTMLHyperlinkElementUtils;
 diff --git a/third_party/blink/renderer/core/html/html_attribute_names.json5 b/third_party/blink/renderer/core/html/html_attribute_names.json5
-index 27b5cb25984..e9e7fd187d9 100644
+index 27b5cb25984..27311aa6479 100644
 --- a/third_party/blink/renderer/core/html/html_attribute_names.json5
 +++ b/third_party/blink/renderer/core/html/html_attribute_names.json5
 @@ -23,7 +23,6 @@
@@ -989,6 +989,14 @@ index 27b5cb25984..e9e7fd187d9 100644
      "autocapitalize",
      "autocomplete",
      "autocorrect",
+@@ -315,7 +314,6 @@
+     "shadowrootmode",
+     "shadowrootdelegatesfocus",
+     "shape",
+-    "sharedstoragewritable",
+     "size",
+     "sizes",
+     "slot",
 diff --git a/third_party/blink/renderer/core/html/html_iframe_element.cc b/third_party/blink/renderer/core/html/html_iframe_element.cc
 index 6f6be4bbdaa..37b20fa3da7 100644
 --- a/third_party/blink/renderer/core/html/html_iframe_element.cc
@@ -1176,6 +1184,50 @@ index 5ca6b7b0cc1..3fdac290430 100644
      {
        name: "fieldset",
        interfaceName: "HTMLFieldSetElement",
+diff --git a/third_party/blink/renderer/core/html/parser/html_preload_scanner.cc b/third_party/blink/renderer/core/html/parser/html_preload_scanner.cc
+index a56c733b05c..66bd26c9caf 100644
+--- a/third_party/blink/renderer/core/html/parser/html_preload_scanner.cc
++++ b/third_party/blink/renderer/core/html/parser/html_preload_scanner.cc
+@@ -340,6 +340,7 @@ class TokenPreloadScanner::StartTagScanner {
+     if (scanner_type_ == ScannerType::kInsertion)
+       request->SetFromInsertionScanner(true);
+ 
++    /*
+     if (attributionsrc_attr_set_) {
+       DCHECK(is_script || is_img);
+       request->SetAttributionReportingEligibleImgOrScript(true);
+@@ -349,6 +350,7 @@ class TokenPreloadScanner::StartTagScanner {
+       DCHECK(is_img);
+       request->SetSharedStorageWritable(true);
+     }
++    */
+ 
+     return request;
+   }
+@@ -389,8 +391,10 @@ class TokenPreloadScanner::StartTagScanner {
+       SetFetchPriorityHint(attribute_value);
+     } else if (Match(attribute_name, html_names::kBlockingAttr)) {
+       blocking_attribute_value_ = attribute_value;
++    /*
+     } else if (Match(attribute_name, html_names::kAttributionsrcAttr)) {
+       attributionsrc_attr_set_ = true;
++    */
+     }
+   }
+ 
+@@ -428,10 +432,12 @@ class TokenPreloadScanner::StartTagScanner {
+     } else if (loading_attr_value_ == LoadingAttributeValue::kAuto &&
+                Match(attribute_name, html_names::kLoadingAttr)) {
+       loading_attr_value_ = GetLoadingAttributeValue(attribute_value);
++    /*
+     } else if (Match(attribute_name, html_names::kAttributionsrcAttr)) {
+       attributionsrc_attr_set_ = true;
+     } else if (Match(attribute_name, html_names::kSharedstoragewritableAttr)) {
+       shared_storage_writable_ = true;
++    */
+     }
+   }
+ 
 diff --git a/third_party/blink/renderer/core/html/parser/preload_request.cc b/third_party/blink/renderer/core/html/parser/preload_request.cc
 index e4506803247..bca9503d31d 100644
 --- a/third_party/blink/renderer/core/html/parser/preload_request.cc
@@ -1515,7 +1567,7 @@ index 5d49fa1b963..3a2808158ad 100644
    }
  
 diff --git a/third_party/blink/renderer/core/permissions_policy/permissions_policy_features.json5 b/third_party/blink/renderer/core/permissions_policy/permissions_policy_features.json5
-index 8066dafa639..8117742625d 100644
+index 8066dafa639..5b1cc2e6a5b 100644
 --- a/third_party/blink/renderer/core/permissions_policy/permissions_policy_features.json5
 +++ b/third_party/blink/renderer/core/permissions_policy/permissions_policy_features.json5
 @@ -65,12 +65,6 @@
@@ -1550,7 +1602,23 @@ index 8066dafa639..8117742625d 100644
      {
        name: "Camera",
        permissions_policy_name: "camera",
-@@ -322,12 +304,6 @@
+@@ -277,15 +259,6 @@
+       permissions_policy_name: "idle-detection",
+       depends_on: ["IdleDetection"],
+     },
+-    {
+-      name: "JoinAdInterestGroup",
+-      permissions_policy_name: "join-ad-interest-group",
+-      feature_default: "EnableForAll",
+-      depends_on: ["AdInterestGroupAPI"],
+-      default_value_behind_flag: [
+-        ["AdInterestGroupAPIRestrictedPolicyByDefault", "EnableForSelf"],
+-      ],
+-    },
+     {
+       name: "KeyboardMap",
+       permissions_policy_name: "keyboard-map",
+@@ -322,12 +295,6 @@
        permissions_policy_name: "picture-in-picture",
        feature_default: "EnableForAll",
      },
@@ -1563,7 +1631,7 @@ index 8066dafa639..8117742625d 100644
      {
        name: "PrivateStateTokenIssuance",
        permissions_policy_name: "private-state-token-issuance",
-@@ -337,15 +313,6 @@
+@@ -337,15 +304,6 @@
        name: "PublicKeyCredentialsGet",
        permissions_policy_name: "publickey-credentials-get",
      },
@@ -1579,7 +1647,7 @@ index 8066dafa639..8117742625d 100644
      {
        name: "ScreenWakeLock",
        permissions_policy_name: "screen-wake-lock",
-@@ -361,18 +328,6 @@
+@@ -361,18 +319,6 @@
        permissions_policy_name: "shared-autofill",
        depends_on: ["SharedAutofill"],
      },
@@ -1629,6 +1697,19 @@ index 0c2bb469e0b..45a2ea166f0 100644
  
      // <spec step="29.6">If el is potentially render-blocking, then block
      // rendering on el.</spec>
+diff --git a/third_party/blink/renderer/core/timing/window_performance.cc b/third_party/blink/renderer/core/timing/window_performance.cc
+index 2c626c25e3e..f0a25e6e81c 100644
+--- a/third_party/blink/renderer/core/timing/window_performance.cc
++++ b/third_party/blink/renderer/core/timing/window_performance.cc
+@@ -120,8 +120,6 @@ AtomicString GetFrameOwnerType(HTMLFrameOwnerElement* frame_owner) {
+       return html_names::kFrameTag.LocalName();
+     case FrameOwnerElementType::kPortal:
+       return html_names::kPortalTag.LocalName();
+-    case FrameOwnerElementType::kFencedframe:
+-      return html_names::kFencedframeTag.LocalName();
+   }
+   NOTREACHED();
+   return g_empty_atom;
 diff --git a/third_party/blink/renderer/core/xmlhttprequest/xml_http_request.idl b/third_party/blink/renderer/core/xmlhttprequest/xml_http_request.idl
 index 41d15d87d3e..c0c56d8d505 100644
 --- a/third_party/blink/renderer/core/xmlhttprequest/xml_http_request.idl

@@ -1451,6 +1451,50 @@ index d7e8edf3b57..0965acff071 100644
    }
  
    SetInputFieldsData(result.InnerElement(), data);
+diff --git a/third_party/blink/renderer/core/page/create_window.cc b/third_party/blink/renderer/core/page/create_window.cc
+index 5d49fa1b963..3a2808158ad 100644
+--- a/third_party/blink/renderer/core/page/create_window.cc
++++ b/third_party/blink/renderer/core/page/create_window.cc
+@@ -71,11 +71,13 @@ WebWindowFeatures GetWindowFeaturesFromString(const String& feature_string,
+                                               LocalDOMWindow* dom_window) {
+   WebWindowFeatures window_features;
+ 
++  /*
+   bool attribution_reporting_enabled =
+       dom_window &&
+       (RuntimeEnabledFeatures::AttributionReportingEnabled(dom_window) ||
+        RuntimeEnabledFeatures::AttributionReportingCrossAppWebEnabled(
+            dom_window));
++  */
+ 
+   // This code follows the HTML spec, specifically
+   // https://html.spec.whatwg.org/C/#concept-window-open-features-tokenize
+@@ -166,8 +168,7 @@ WebWindowFeatures GetWindowFeaturesFromString(const String& feature_string,
+     }
+ 
+     if (!ui_features_were_disabled && key_string != "noopener" &&
+-        key_string != "noreferrer" && key_string != "fullscreen" &&
+-        (!attribution_reporting_enabled || key_string != "attributionsrc")) {
++        key_string != "noreferrer" && key_string != "fullscreen") {
+       ui_features_were_disabled = true;
+       menu_bar = false;
+       status_bar = false;
+@@ -216,6 +217,7 @@ WebWindowFeatures GetWindowFeaturesFromString(const String& feature_string,
+       // silently drop the flag. Currently the browser will block the popup
+       // entirely if this flag is set and permission is not granted.
+       window_features.is_fullscreen = value;
++    /*
+     } else if (attribution_reporting_enabled &&
+                key_string == "attributionsrc") {
+       if (!window_features.attribution_srcs.has_value()) {
+@@ -238,6 +240,7 @@ WebWindowFeatures GetWindowFeaturesFromString(const String& feature_string,
+         window_features.attribution_srcs->emplace_back(DecodeURLEscapeSequences(
+             original_case_value_string.ToString(), DecodeURLMode::kUTF8));
+       }
++    */
+     }
+   }
+ 
 diff --git a/third_party/blink/renderer/core/permissions_policy/permissions_policy_features.json5 b/third_party/blink/renderer/core/permissions_policy/permissions_policy_features.json5
 index 8066dafa639..8117742625d 100644
 --- a/third_party/blink/renderer/core/permissions_policy/permissions_policy_features.json5
@@ -1536,7 +1580,7 @@ index 8066dafa639..8117742625d 100644
        name: "SmartCard",
        permissions_policy_name: "smart-card",
 diff --git a/third_party/blink/renderer/core/script/script_loader.cc b/third_party/blink/renderer/core/script/script_loader.cc
-index 0c2bb469e0b..efb3b4cf17f 100644
+index 0c2bb469e0b..45a2ea166f0 100644
 --- a/third_party/blink/renderer/core/script/script_loader.cc
 +++ b/third_party/blink/renderer/core/script/script_loader.cc
 @@ -38,7 +38,6 @@
@@ -1547,24 +1591,7 @@ index 0c2bb469e0b..efb3b4cf17f 100644
  #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
  #include "third_party/blink/renderer/core/frame/local_dom_window.h"
  #include "third_party/blink/renderer/core/frame/local_frame.h"
-@@ -87,6 +86,7 @@
- #include "third_party/blink/renderer/platform/wtf/text/string_hash.h"
- #include "third_party/blink/renderer/platform/wtf/text/string_view.h"
- 
-+/*
- namespace {
- blink::scheduler::TaskAttributionInfo* GetRunningTask(
-     blink::ScriptState* script_state) {
-@@ -99,6 +99,8 @@ blink::scheduler::TaskAttributionInfo* GetRunningTask(
- }
- 
- }  // namespace
-+*/
-+
- namespace blink {
- 
- ScriptLoader::ScriptLoader(ScriptElementBase* element,
-@@ -816,14 +818,16 @@ PendingScript* ScriptLoader::PrepareScript(
+@@ -816,14 +815,16 @@ PendingScript* ScriptLoader::PrepareScript(
      }
  
      // TODO(apaseltiner): Propagate the element instead of passing nullptr.
@@ -1574,8 +1601,8 @@ index 0c2bb469e0b..efb3b4cf17f 100644
              url,
 -            /*element=*/nullptr,
 -            /*request_id=*/absl::nullopt)) {
-+            /*element=*nullptr,
-+            /*request_id=*absl::nullopt)) {
++            *element=*nullptr,
++            *request_id=*absl::nullopt)) {
        options.SetAttributionReportingEligibility(
            ScriptFetchOptions::AttributionReportingEligibility::kEligible);
      }

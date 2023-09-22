@@ -762,6 +762,151 @@ index 7e7a0b3794d..2d2269f5cdd 100644
      // TODO(domfarolino): add support for RequestInit window member.
      //any window; // can only be set to null
  };
+diff --git a/third_party/blink/renderer/core/frame/build.gni b/third_party/blink/renderer/core/frame/build.gni
+index ce187d94450..85977ffa069 100644
+--- a/third_party/blink/renderer/core/frame/build.gni
++++ b/third_party/blink/renderer/core/frame/build.gni
+@@ -9,8 +9,6 @@ blink_core_sources_frame = [
+   "ad_script_identifier.h",
+   "animation_frame_timing_monitor.cc",
+   "animation_frame_timing_monitor.h",
+-  "attribution_src_loader.cc",
+-  "attribution_src_loader.h",
+   "bar_prop.cc",
+   "bar_prop.h",
+   "browser_controls.cc",
+diff --git a/third_party/blink/renderer/core/frame/local_dom_window.cc b/third_party/blink/renderer/core/frame/local_dom_window.cc
+index cc84e51f5bb..57688501a37 100644
+--- a/third_party/blink/renderer/core/frame/local_dom_window.cc
++++ b/third_party/blink/renderer/core/frame/local_dom_window.cc
+@@ -84,7 +84,6 @@
+ #include "third_party/blink/renderer/core/events/pop_state_event.h"
+ #include "third_party/blink/renderer/core/execution_context/execution_context_lifecycle_observer.h"
+ #include "third_party/blink/renderer/core/execution_context/window_agent.h"
+-#include "third_party/blink/renderer/core/frame/attribution_src_loader.h"
+ #include "third_party/blink/renderer/core/frame/bar_prop.h"
+ #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
+ #include "third_party/blink/renderer/core/frame/document_policy_violation_report_body.h"
+@@ -2192,6 +2191,8 @@ DOMWindow* LocalDOMWindow::open(v8::Isolate* isolate,
+   frame_request.GetResourceRequest().SetHasUserGesture(has_user_gesture);
+   GetFrame()->MaybeLogAdClickNavigation();
+ 
++  /*
++TODO
+   if (window_features.attribution_srcs.has_value()) {
+     // An impression must be attached prior to the
+     // `FindOrCreateFrameForNavigation()` call, as that call may result in
+@@ -2200,10 +2201,11 @@ DOMWindow* LocalDOMWindow::open(v8::Isolate* isolate,
+     frame_request.SetImpression(entered_window->GetFrame()
+                                     ->GetAttributionSrcLoader()
+                                     ->RegisterNavigation(
+-                                        /*navigation_url=*/completed_url,
++                                        *navigation_url=*completed_url,
+                                         *window_features.attribution_srcs,
+                                         has_user_gesture));
+   }
++  */
+ 
+   FrameTree::FindResult result =
+       GetFrame()->Tree().FindOrCreateFrameForNavigation(
+diff --git a/third_party/blink/renderer/core/frame/local_frame.cc b/third_party/blink/renderer/core/frame/local_frame.cc
+index 18d82b682d5..ebe2991a42b 100644
+--- a/third_party/blink/renderer/core/frame/local_frame.cc
++++ b/third_party/blink/renderer/core/frame/local_frame.cc
+@@ -114,7 +114,6 @@
+ #include "third_party/blink/renderer/core/fileapi/public_url_manager.h"
+ #include "third_party/blink/renderer/core/fragment_directive/text_fragment_handler.h"
+ #include "third_party/blink/renderer/core/frame/ad_tracker.h"
+-#include "third_party/blink/renderer/core/frame/attribution_src_loader.h"
+ #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
+ #include "third_party/blink/renderer/core/frame/event_handler_registry.h"
+ #include "third_party/blink/renderer/core/frame/frame_console.h"
+@@ -434,7 +433,7 @@ LocalFrame::~LocalFrame() {
+ 
+ void LocalFrame::Trace(Visitor* visitor) const {
+   visitor->Trace(ad_tracker_);
+-  visitor->Trace(attribution_src_loader_);
++  // visitor->Trace(attribution_src_loader_);
+   visitor->Trace(probe_sink_);
+   visitor->Trace(performance_monitor_);
+   visitor->Trace(idleness_detector_);
+@@ -1706,7 +1705,7 @@ LocalFrame::LocalFrame(LocalFrameClient* client,
+     performance_monitor_ = LocalFrameRoot().performance_monitor_;
+   }
+   idleness_detector_ = MakeGarbageCollected<IdlenessDetector>(this, clock);
+-  attribution_src_loader_ = MakeGarbageCollected<AttributionSrcLoader>(this);
++  //attribution_src_loader_ = MakeGarbageCollected<AttributionSrcLoader>(this);
+   inspector_task_runner_->InitIsolate(isolate);
+ 
+   if (IsOutermostMainFrame()) {
+diff --git a/third_party/blink/renderer/core/frame/local_frame.h b/third_party/blink/renderer/core/frame/local_frame.h
+index eb4ce179cb0..439afda1fce 100644
+--- a/third_party/blink/renderer/core/frame/local_frame.h
++++ b/third_party/blink/renderer/core/frame/local_frame.h
+@@ -114,7 +114,6 @@ namespace blink {
+ 
+ class AdTracker;
+ class AssociatedInterfaceProvider;
+-class AttributionSrcLoader;
+ class BackgroundColorPaintImageGenerator;
+ class BoxShadowPaintImageGenerator;
+ class BrowserInterfaceBrokerProxy;
+@@ -499,9 +498,6 @@ class CORE_EXPORT LocalFrame final
+   IdlenessDetector* GetIdlenessDetector() { return idleness_detector_; }
+   AdTracker* GetAdTracker() { return ad_tracker_; }
+   void SetAdTrackerForTesting(AdTracker* ad_tracker);
+-  AttributionSrcLoader* GetAttributionSrcLoader() {
+-    return attribution_src_loader_;
+-  }
+ 
+   enum class LazyLoadImageSetting { kDisabled, kEnabledExplicit };
+   // Returns the enabled state of lazyloading of images.
+@@ -1036,7 +1032,7 @@ class CORE_EXPORT LocalFrame final
+   Member<PerformanceMonitor> performance_monitor_;
+   Member<AdTracker> ad_tracker_;
+   Member<IdlenessDetector> idleness_detector_;
+-  Member<AttributionSrcLoader> attribution_src_loader_;
++  // Member<AttributionSrcLoader> attribution_src_loader_;
+   Member<InspectorIssueReporter> inspector_issue_reporter_;
+   Member<InspectorTraceEvents> inspector_trace_events_;
+   // SmoothScrollSequencer is only populated for local roots; all local frames
+diff --git a/third_party/blink/renderer/core/frame/web_remote_frame_impl.cc b/third_party/blink/renderer/core/frame/web_remote_frame_impl.cc
+index ae65150f05b..54a7fccb540 100644
+--- a/third_party/blink/renderer/core/frame/web_remote_frame_impl.cc
++++ b/third_party/blink/renderer/core/frame/web_remote_frame_impl.cc
+@@ -29,7 +29,6 @@
+ #include "third_party/blink/renderer/core/frame/settings.h"
+ #include "third_party/blink/renderer/core/frame/web_frame_widget_impl.h"
+ #include "third_party/blink/renderer/core/frame/web_local_frame_impl.h"
+-#include "third_party/blink/renderer/core/html/fenced_frame/html_fenced_frame_element.h"
+ #include "third_party/blink/renderer/core/html/html_frame_owner_element.h"
+ #include "third_party/blink/renderer/core/html/portal/html_portal_element.h"
+ #include "third_party/blink/renderer/core/html_names.h"
+@@ -155,12 +154,10 @@ WebRemoteFrameImpl* WebRemoteFrameImpl::CreateForPortalOrFencedFrame(
+   // We first convert this to a raw blink::Element*, and manually convert this
+   // to an HTMLElement*. That is the only way the IsA<> and To<> casts below
+   // will work.
+-  DCHECK(IsA<HTMLPortalElement>(frame_owner) ||
+-         IsA<HTMLFencedFrameElement>(frame_owner));
++  DCHECK(IsA<HTMLPortalElement>(frame_owner));
+   auto* frame = MakeGarbageCollected<WebRemoteFrameImpl>(scope, frame_token);
+   ExecutionContext* execution_context = frame_owner->GetExecutionContext();
+-  DCHECK(RuntimeEnabledFeatures::PortalsEnabled(execution_context) ||
+-         RuntimeEnabledFeatures::FencedFramesEnabled(execution_context));
++  DCHECK(RuntimeEnabledFeatures::PortalsEnabled(execution_context));
+   LocalFrame* host_frame = frame_owner->GetDocument().GetFrame();
+   frame->InitializeCoreFrame(
+       *host_frame->GetPage(), frame_owner, /*parent=*/nullptr,
+@@ -291,8 +288,7 @@ void WebRemoteFrameImpl::InitializeCoreFrame(
+     // Never gets to this point unless |owner| is a <portal> or <fencedframe>
+     // element.
+     HTMLFrameOwnerElement* owner_element = To<HTMLFrameOwnerElement>(owner);
+-    DCHECK(owner_element->IsHTMLPortalElement() ||
+-           owner_element->IsHTMLFencedFrameElement());
++    DCHECK(owner_element->IsHTMLPortalElement());
+     LocalFrame& local_frame =
+         owner_element->GetDocument().GetFrame()->LocalFrameRoot();
+     ancestor_widget = WebLocalFrameImpl::FromFrame(local_frame)->FrameWidget();
 diff --git a/third_party/blink/renderer/core/frame/window.idl b/third_party/blink/renderer/core/frame/window.idl
 index b276d30fff5..d3d64d08726 100644
 --- a/third_party/blink/renderer/core/frame/window.idl
@@ -777,6 +922,64 @@ index b276d30fff5..d3d64d08726 100644
  };
  
  Window includes GlobalEventHandlers;
+diff --git a/third_party/blink/renderer/core/html/build.gni b/third_party/blink/renderer/core/html/build.gni
+index a723affd3fb..49d356acb8e 100644
+--- a/third_party/blink/renderer/core/html/build.gni
++++ b/third_party/blink/renderer/core/html/build.gni
+@@ -80,15 +80,6 @@ blink_core_sources_html = [
+   "document_all_name_collection.h",
+   "document_name_collection.cc",
+   "document_name_collection.h",
+-  "fenced_frame/document_fenced_frames.cc",
+-  "fenced_frame/document_fenced_frames.h",
+-  "fenced_frame/fence.cc",
+-  "fenced_frame/fence.h",
+-  "fenced_frame/fenced_frame_ad_sizes.h",
+-  "fenced_frame/fenced_frame_config.cc",
+-  "fenced_frame/fenced_frame_config.h",
+-  "fenced_frame/html_fenced_frame_element.cc",
+-  "fenced_frame/html_fenced_frame_element.h",
+   "forms/base_button_input_type.cc",
+   "forms/base_button_input_type.h",
+   "forms/base_checkable_input_type.cc",
+diff --git a/third_party/blink/renderer/core/html/custom/element_internals.cc b/third_party/blink/renderer/core/html/custom/element_internals.cc
+index 87ec3607916..3ec5ae5ccef 100644
+--- a/third_party/blink/renderer/core/html/custom/element_internals.cc
++++ b/third_party/blink/renderer/core/html/custom/element_internals.cc
+@@ -290,6 +290,8 @@ ShadowRoot* ElementInternals::shadowRoot() const {
+ 
+ const AtomicString& ElementInternals::FastGetAttribute(
+     const QualifiedName& attribute) const {
++  if (attribute == html_names::kAttributionsrcAttr)
++    return g_null_atom;
+   const auto it = accessibility_semantics_map_.find(attribute);
+   if (it == accessibility_semantics_map_.end())
+     return g_null_atom;
+diff --git a/third_party/blink/renderer/core/html/html_anchor_element.cc b/third_party/blink/renderer/core/html/html_anchor_element.cc
+index d1b3c908c29..2bc6c617995 100644
+--- a/third_party/blink/renderer/core/html/html_anchor_element.cc
++++ b/third_party/blink/renderer/core/html/html_anchor_element.cc
+@@ -490,6 +490,7 @@ void HTMLAnchorElement::NavigateToHyperlink(ResourceRequest request,
+ 
+   frame->MaybeLogAdClickNavigation();
+ 
++  /*
+   if (const AtomicString& attribution_src =
+           FastGetAttribute(html_names::kAttributionsrcAttr);
+       !attribution_src.IsNull()) {
+@@ -505,9 +506,10 @@ void HTMLAnchorElement::NavigateToHyperlink(ResourceRequest request,
+ 
+     frame_request.SetImpression(
+         frame->GetAttributionSrcLoader()->RegisterNavigation(
+-            /*navigation_url=*/completed_url, attribution_src,
+-            /*element=*/this, request.HasUserGesture()));
++            *navigation_url=*completed_url, attribution_src,
++            *element=*this, request.HasUserGesture()));
+   }
++  */
+ 
+   Frame* target_frame =
+       frame->Tree().FindOrCreateFrameForNavigation(frame_request, target).frame;
 diff --git a/third_party/blink/renderer/core/html/html_anchor_element.idl b/third_party/blink/renderer/core/html/html_anchor_element.idl
 index 0e7860050f1..6520bacb61e 100644
 --- a/third_party/blink/renderer/core/html/html_anchor_element.idl
@@ -788,27 +991,41 @@ index 0e7860050f1..6520bacb61e 100644
 -HTMLAnchorElement includes HTMLAttributionSrcElementUtils;
  HTMLAnchorElement includes HTMLHyperlinkElementUtils;
 diff --git a/third_party/blink/renderer/core/html/html_iframe_element.cc b/third_party/blink/renderer/core/html/html_iframe_element.cc
-index 6f6be4bbdaa..1e6ea7d95f9 100644
+index 6f6be4bbdaa..37b20fa3da7 100644
 --- a/third_party/blink/renderer/core/html/html_iframe_element.cc
 +++ b/third_party/blink/renderer/core/html/html_iframe_element.cc
-@@ -273,7 +273,7 @@ void HTMLIFrameElement::ParseAttribute(
+@@ -273,6 +273,7 @@ void HTMLIFrameElement::ParseAttribute(
        should_call_did_change_attributes = true;
        UseCounter::Count(GetDocument(), WebFeature::kIFrameCSPAttribute);
      }
--  } else if (name == html_names::kBrowsingtopicsAttr) {
-+  } else if (false && name == html_names::kBrowsingtopicsAttr) {
++  /*
+   } else if (name == html_names::kBrowsingtopicsAttr) {
      if (RuntimeEnabledFeatures::TopicsAPIEnabled(GetExecutionContext()) &&
          GetExecutionContext()->IsSecureContext()) {
-       bool old_browsing_topics = !params.old_value.IsNull();
-@@ -594,7 +594,7 @@ void HTMLIFrameElement::DidChangeAttributes() {
+@@ -306,6 +307,7 @@ void HTMLIFrameElement::ParseAttribute(
+                           WebFeature::kSharedStorageAPI_Iframe_Attribute);
+       }
+     }
++  */
+   } else if (name == html_names::kCredentiallessAttr &&
+              RuntimeEnabledFeatures::AnonymousIframeEnabled()) {
+     bool new_value = !value.IsNull();
+@@ -594,6 +596,7 @@ void HTMLIFrameElement::DidChangeAttributes() {
    attributes->parsed_csp_attribute = csp.empty() ? nullptr : std::move(csp[0]);
    attributes->credentialless = credentialless_;
  
--  if (RuntimeEnabledFeatures::TopicsAPIEnabled(GetExecutionContext()) &&
-+  if (false && RuntimeEnabledFeatures::TopicsAPIEnabled(GetExecutionContext()) &&
++  /*
+   if (RuntimeEnabledFeatures::TopicsAPIEnabled(GetExecutionContext()) &&
        GetExecutionContext()->IsSecureContext()) {
      attributes->browsing_topics =
-         !FastGetAttribute(html_names::kBrowsingtopicsAttr).IsNull();
+@@ -606,6 +609,7 @@ void HTMLIFrameElement::DidChangeAttributes() {
+     attributes->shared_storage_writable =
+         !FastGetAttribute(html_names::kSharedstoragewritableAttr).IsNull();
+   }
++  */
+ 
+   attributes->id = ConvertToReportValue(id_);
+   attributes->name = ConvertToReportValue(name_);
 diff --git a/third_party/blink/renderer/core/html/html_iframe_element.idl b/third_party/blink/renderer/core/html/html_iframe_element.idl
 index 5b483d356ca..35bcb96bb1f 100644
 --- a/third_party/blink/renderer/core/html/html_iframe_element.idl
@@ -853,18 +1070,32 @@ index 061f2ae228b..9854306cbb3 100644
  
  bool HTMLIFrameElementSandbox::ValidateTokenValue(
 diff --git a/third_party/blink/renderer/core/html/html_image_element.cc b/third_party/blink/renderer/core/html/html_image_element.cc
-index 3e78cc6f44e..5d35b4f4024 100644
+index 3e78cc6f44e..4f202f6ce84 100644
 --- a/third_party/blink/renderer/core/html/html_image_element.cc
 +++ b/third_party/blink/renderer/core/html/html_image_element.cc
-@@ -388,6 +388,7 @@ void HTMLImageElement::ParseAttribute(
-       window->GetFrame()->GetAttributionSrcLoader()->Register(params.new_value,
-                                                               /*element=*/this);
+@@ -36,7 +36,6 @@
+ #include "third_party/blink/renderer/core/dom/events/event_dispatch_forbidden_scope.h"
+ #include "third_party/blink/renderer/core/dom/node_traversal.h"
+ #include "third_party/blink/renderer/core/dom/shadow_root.h"
+-#include "third_party/blink/renderer/core/frame/attribution_src_loader.h"
+ #include "third_party/blink/renderer/core/frame/deprecation/deprecation.h"
+ #include "third_party/blink/renderer/core/frame/local_dom_window.h"
+ #include "third_party/blink/renderer/core/frame/local_frame_client.h"
+@@ -382,11 +381,12 @@ void HTMLImageElement::ParseAttribute(
+       GetImageLoader().UpdateFromElement(
+           ImageLoader::kUpdateIgnorePreviousError);
      }
 +  /*
+   } else if (name == html_names::kAttributionsrcAttr) {
+     LocalDOMWindow* window = GetDocument().domWindow();
+     if (window && window->GetFrame()) {
+       window->GetFrame()->GetAttributionSrcLoader()->Register(params.new_value,
+-                                                              /*element=*/this);
++                                                              *element=*this);
+     }
    } else if (name == html_names::kSharedstoragewritableAttr &&
               RuntimeEnabledFeatures::SharedStorageAPIM118Enabled(
-                  GetExecutionContext())) {
-@@ -401,6 +402,7 @@ void HTMLImageElement::ParseAttribute(
+@@ -401,6 +401,7 @@ void HTMLImageElement::ParseAttribute(
        UseCounter::Count(GetDocument(),
                          WebFeature::kSharedStorageAPI_Image_Attribute);
      }
@@ -882,6 +1113,39 @@ index 1d21e1de165..d870fbe3e1a 100644
  
 -HTMLImageElement includes HTMLAttributionSrcElementUtils;
 -HTMLImageElement includes HTMLSharedStorageWritableElementUtils;
+diff --git a/third_party/blink/renderer/core/html/html_script_element.cc b/third_party/blink/renderer/core/html/html_script_element.cc
+index 27e420882ec..17df1bec4fd 100644
+--- a/third_party/blink/renderer/core/html/html_script_element.cc
++++ b/third_party/blink/renderer/core/html/html_script_element.cc
+@@ -32,7 +32,6 @@
+ #include "third_party/blink/renderer/core/dom/events/event.h"
+ #include "third_party/blink/renderer/core/dom/text.h"
+ #include "third_party/blink/renderer/core/execution_context/execution_context.h"
+-#include "third_party/blink/renderer/core/frame/attribution_src_loader.h"
+ #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
+ #include "third_party/blink/renderer/core/frame/local_dom_window.h"
+ #include "third_party/blink/renderer/core/frame/web_feature.h"
+@@ -108,10 +107,7 @@ void HTMLScriptElement::ParseAttribute(
+           *this);
+     }
+   } else if (params.name == html_names::kAttributionsrcAttr) {
+-    if (GetDocument().GetFrame()) {
+-      GetDocument().GetFrame()->GetAttributionSrcLoader()->Register(
+-          params.new_value, /*element=*/this);
+-    }
++    // ignore for now
+   } else {
+     HTMLElement::ParseAttribute(params);
+   }
+@@ -270,7 +266,7 @@ bool HTMLScriptElement::HasSourceAttribute() const {
+ }
+ 
+ bool HTMLScriptElement::HasAttributionsrcAttribute() const {
+-  return FastHasAttribute(html_names::kAttributionsrcAttr);
++  return false;//FastHasAttribute(html_names::kAttributionsrcAttr);
+ }
+ 
+ bool HTMLScriptElement::IsConnected() const {
 diff --git a/third_party/blink/renderer/core/html/html_script_element.idl b/third_party/blink/renderer/core/html/html_script_element.idl
 index 2f2fad8285c..bac067a5c13 100644
 --- a/third_party/blink/renderer/core/html/html_script_element.idl
@@ -949,7 +1213,7 @@ index e93b032a9b6..3595d168d35 100644
    bool is_potentially_lcp_influencer_ = false;
    bool shared_storage_writable_ = false;
 diff --git a/third_party/blink/renderer/core/inspector/inspector_dom_agent.cc b/third_party/blink/renderer/core/inspector/inspector_dom_agent.cc
-index 5152fecb714..6a3ff8d8e7f 100644
+index 5152fecb714..37e6b0687a1 100644
 --- a/third_party/blink/renderer/core/inspector/inspector_dom_agent.cc
 +++ b/third_party/blink/renderer/core/inspector/inspector_dom_agent.cc
 @@ -64,8 +64,6 @@
@@ -961,15 +1225,24 @@ index 5152fecb714..6a3ff8d8e7f 100644
  #include "third_party/blink/renderer/core/html/forms/html_input_element.h"
  #include "third_party/blink/renderer/core/html/html_document.h"
  #include "third_party/blink/renderer/core/html/html_frame_owner_element.h"
-@@ -2648,7 +2646,7 @@ protocol::Response InspectorDOMAgent::getFrameOwner(
+@@ -2648,7 +2646,8 @@ protocol::Response InspectorDOMAgent::getFrameOwner(
        break;
      }
  
 -    if (IsA<LocalFrame>(frame)) {
++    /*
 +    if (false && IsA<LocalFrame>(frame)) {
        if (auto* fenced_frames = DocumentFencedFrames::Get(
                *To<LocalFrame>(frame)->GetDocument())) {
          for (HTMLFencedFrameElement* ff : fenced_frames->GetFencedFrames()) {
+@@ -2660,6 +2659,7 @@ protocol::Response InspectorDOMAgent::getFrameOwner(
+         }
+       }
+     }
++    */
+   }
+ 
+   if (!found_frame) {
 diff --git a/third_party/blink/renderer/core/loader/document_loader.h b/third_party/blink/renderer/core/loader/document_loader.h
 index 8328adb3dfc..cb171e1d58b 100644
 --- a/third_party/blink/renderer/core/loader/document_loader.h
@@ -1033,7 +1306,7 @@ index 1eb674b2997..7fe4b5aac5f 100644
    request.SetSharedDictionaryWriterEnabled(
        RuntimeEnabledFeatures::CompressionDictionaryTransportEnabled(
 diff --git a/third_party/blink/renderer/core/loader/image_loader.cc b/third_party/blink/renderer/core/loader/image_loader.cc
-index c647f154a13..7e5b8b6c351 100644
+index c647f154a13..d43c9b6c207 100644
 --- a/third_party/blink/renderer/core/loader/image_loader.cc
 +++ b/third_party/blink/renderer/core/loader/image_loader.cc
 @@ -25,7 +25,6 @@
@@ -1062,14 +1335,14 @@ index c647f154a13..7e5b8b6c351 100644
            frame->GetAttributionSrcLoader()->CanRegister(
                url, To<HTMLImageElement>(GetElement()),
 -              /*request_id=*/absl::nullopt)) {
-+              /*request_id=*absl::nullopt)) {
++              *request_id=*absl::nullopt)) {
          resource_request.SetAttributionReportingEligibility(
              network::mojom::AttributionReportingEligibility::
                  kEventSourceOrTrigger);
        }
 -      bool shared_storage_writable =
 +      bool shared_storage_writable = false;
-+      /*
++      *
            GetElement()->FastHasAttribute(
                html_names::kSharedstoragewritableAttr) &&
            RuntimeEnabledFeatures::SharedStorageAPIM118Enabled(
@@ -1082,7 +1355,7 @@ index c647f154a13..7e5b8b6c351 100644
      bool page_is_being_dismissed =
          document.PageDismissalEventBeingDispatched() != Document::kNoDismissal;
 diff --git a/third_party/blink/renderer/core/loader/resource_load_observer_for_frame.cc b/third_party/blink/renderer/core/loader/resource_load_observer_for_frame.cc
-index 5855bbbc0e0..869f0edbe4e 100644
+index 5855bbbc0e0..8e54e77fadd 100644
 --- a/third_party/blink/renderer/core/loader/resource_load_observer_for_frame.cc
 +++ b/third_party/blink/renderer/core/loader/resource_load_observer_for_frame.cc
 @@ -14,7 +14,6 @@
@@ -1104,6 +1377,17 @@ index 5855bbbc0e0..869f0edbe4e 100644
  
    probe::WillSendRequest(
        GetProbe(), document_loader_,
+@@ -318,8 +319,10 @@ void ResourceLoadObserverForFrame::DidReceiveResponse(
+         document_loader_->GetContentSecurityNotifier());
+   }
+ 
++  /*
+   frame->GetAttributionSrcLoader()->MaybeRegisterAttributionHeaders(
+       request, response, resource);
++  */
+ 
+   frame->Loader().Progress().IncrementProgress(identifier, response);
+   probe::DidReceiveResourceResponse(GetProbe(), identifier, document_loader_,
 diff --git a/third_party/blink/renderer/core/origin_trials/origin_trial_context.cc b/third_party/blink/renderer/core/origin_trials/origin_trial_context.cc
 index d35dffa051d..696b8633eb0 100644
 --- a/third_party/blink/renderer/core/origin_trials/origin_trial_context.cc
@@ -1130,7 +1414,7 @@ index d35dffa051d..696b8633eb0 100644
      const String& trial_name,
      base::Time expiry_time) {
 diff --git a/third_party/blink/renderer/core/page/context_menu_controller.cc b/third_party/blink/renderer/core/page/context_menu_controller.cc
-index d7e8edf3b57..141b39d247e 100644
+index d7e8edf3b57..0965acff071 100644
 --- a/third_party/blink/renderer/core/page/context_menu_controller.cc
 +++ b/third_party/blink/renderer/core/page/context_menu_controller.cc
 @@ -61,7 +61,6 @@
@@ -1155,8 +1439,8 @@ index d7e8edf3b57..141b39d247e 100644
              attribution_src_loader->CanRegister(result.AbsoluteLinkURL(),
 -                                                /*element=*/anchor,
 -                                                /*request_id=*/absl::nullopt)) {
-+                                                /*element=*anchor,
-+                                                /*request_id=*absl::nullopt)) {
++                                                *element=*anchor,
++                                                *request_id=*absl::nullopt)) {
            data.impression = blink::Impression{
                .runtime_features = attribution_src_loader->GetRuntimeFeatures(),
            };

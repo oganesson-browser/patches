@@ -1113,7 +1113,7 @@ index 1d21e1de165..d870fbe3e1a 100644
 -HTMLImageElement includes HTMLAttributionSrcElementUtils;
 -HTMLImageElement includes HTMLSharedStorageWritableElementUtils;
 diff --git a/third_party/blink/renderer/core/html/html_script_element.cc b/third_party/blink/renderer/core/html/html_script_element.cc
-index 27e420882ec..17df1bec4fd 100644
+index 27e420882ec..4dbbd273d62 100644
 --- a/third_party/blink/renderer/core/html/html_script_element.cc
 +++ b/third_party/blink/renderer/core/html/html_script_element.cc
 @@ -32,7 +32,6 @@
@@ -1124,19 +1124,19 @@ index 27e420882ec..17df1bec4fd 100644
  #include "third_party/blink/renderer/core/frame/csp/content_security_policy.h"
  #include "third_party/blink/renderer/core/frame/local_dom_window.h"
  #include "third_party/blink/renderer/core/frame/web_feature.h"
-@@ -108,10 +107,7 @@ void HTMLScriptElement::ParseAttribute(
+@@ -107,11 +106,6 @@ void HTMLScriptElement::ParseAttribute(
+       GetDocument().GetRenderBlockingResourceManager()->RemovePendingScript(
            *this);
      }
-   } else if (params.name == html_names::kAttributionsrcAttr) {
+-  } else if (params.name == html_names::kAttributionsrcAttr) {
 -    if (GetDocument().GetFrame()) {
 -      GetDocument().GetFrame()->GetAttributionSrcLoader()->Register(
 -          params.new_value, /*element=*/this);
 -    }
-+    // ignore for now
    } else {
      HTMLElement::ParseAttribute(params);
    }
-@@ -270,7 +266,7 @@ bool HTMLScriptElement::HasSourceAttribute() const {
+@@ -270,7 +264,7 @@ bool HTMLScriptElement::HasSourceAttribute() const {
  }
  
  bool HTMLScriptElement::HasAttributionsrcAttribute() const {

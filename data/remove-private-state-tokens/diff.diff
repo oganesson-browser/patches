@@ -1,0 +1,1227 @@
+diff --git a/chrome/browser/k_anonymity_service/k_anonymity_service_client.cc b/chrome/browser/k_anonymity_service/k_anonymity_service_client.cc
+index db7079161dc..6c186ceed9f 100644
+--- a/chrome/browser/k_anonymity_service/k_anonymity_service_client.cc
++++ b/chrome/browser/k_anonymity_service/k_anonymity_service_client.cc
+@@ -36,7 +36,6 @@
+ #include "services/network/public/cpp/simple_url_loader.h"
+ #include "services/network/public/mojom/network_context.mojom.h"
+ #include "services/network/public/mojom/oblivious_http_request.mojom.h"
+-#include "services/network/public/mojom/trust_tokens.mojom.h"
+ 
+ namespace {
+ 
+diff --git a/chrome/browser/k_anonymity_service/k_anonymity_service_client.h b/chrome/browser/k_anonymity_service/k_anonymity_service_client.h
+index ad7b726b20b..99adbe6c3bd 100644
+--- a/chrome/browser/k_anonymity_service/k_anonymity_service_client.h
++++ b/chrome/browser/k_anonymity_service/k_anonymity_service_client.h
+@@ -26,7 +26,6 @@
+ #include "services/network/public/cpp/shared_url_loader_factory.h"
+ #include "services/network/public/cpp/simple_url_loader.h"
+ #include "services/network/public/mojom/oblivious_http_request.mojom-forward.h"
+-#include "services/network/public/mojom/trust_tokens.mojom.h"
+ 
+ // This class implements the KAnonymityServiceDelegate by sending requests
+ // to the Chrome k-anonymity Service. This class will eventually send requests
+diff --git a/chrome/browser/k_anonymity_service/k_anonymity_trust_token_getter_unittest.cc b/chrome/browser/k_anonymity_service/k_anonymity_trust_token_getter_unittest.cc
+index f5c2339f242..3dfb57f2ef5 100644
+--- a/chrome/browser/k_anonymity_service/k_anonymity_trust_token_getter_unittest.cc
++++ b/chrome/browser/k_anonymity_service/k_anonymity_trust_token_getter_unittest.cc
+@@ -27,7 +27,6 @@
+ #include "services/data_decoder/public/cpp/test_support/in_process_data_decoder.h"
+ #include "services/network/public/cpp/features.h"
+ #include "services/network/public/cpp/weak_wrapper_shared_url_loader_factory.h"
+-#include "services/network/public/mojom/trust_tokens.mojom.h"
+ #include "services/network/test/test_url_loader_factory.h"
+ #include "testing/gmock/include/gmock/gmock.h"
+ #include "testing/gtest/include/gtest/gtest.h"
+diff --git a/chrome/browser/k_anonymity_service/remote_trust_token_query_answerer.h b/chrome/browser/k_anonymity_service/remote_trust_token_query_answerer.h
+index 10c0a67f3e8..853442f1a6e 100644
+--- a/chrome/browser/k_anonymity_service/remote_trust_token_query_answerer.h
++++ b/chrome/browser/k_anonymity_service/remote_trust_token_query_answerer.h
+@@ -8,7 +8,6 @@
+ #include "base/memory/raw_ptr.h"
+ #include "chrome/browser/profiles/profile.h"
+ #include "mojo/public/cpp/bindings/remote.h"
+-#include "services/network/public/mojom/trust_tokens.mojom.h"
+ 
+ // This class acts as a proxy to the TrustTokenQueryAnswerer in the network
+ // service. When something happens to the mojom connection to the
+diff --git a/components/browsing_data/content/browsing_data_model_unittest.cc b/components/browsing_data/content/browsing_data_model_unittest.cc
+index bc170a0509c..3a0f9c797b2 100644
+--- a/components/browsing_data/content/browsing_data_model_unittest.cc
++++ b/components/browsing_data/content/browsing_data_model_unittest.cc
+@@ -20,7 +20,6 @@
+ #include "net/extras/shared_dictionary/shared_dictionary_isolation_key.h"
+ #include "net/extras/shared_dictionary/shared_dictionary_usage_info.h"
+ #include "services/network/public/cpp/features.h"
+-#include "services/network/public/mojom/trust_tokens.mojom.h"
+ #include "services/network/test/test_network_context.h"
+ #include "testing/gmock/include/gmock/gmock.h"
+ #include "testing/gtest/include/gtest/gtest.h"
+diff --git a/content/browser/renderer_host/render_frame_host_impl.cc b/content/browser/renderer_host/render_frame_host_impl.cc
+index 0f934bfba1f..b2325f741ea 100644
+--- a/content/browser/renderer_host/render_frame_host_impl.cc
++++ b/content/browser/renderer_host/render_frame_host_impl.cc
+@@ -621,6 +621,7 @@ void OnDataURLRetrieved(
+ // A return value of kForbid denotes that the feature is disabled for the
+ // frame. A return value of kPotentiallyPermit means that all trusted
+ // information sources say that the policy is enabled.
++/*
+ network::mojom::TrustTokenOperationPolicyVerdict
+ DetermineWhetherToForbidTrustTokenOperation(
+     const RenderFrameHostImpl* frame,
+@@ -711,6 +712,7 @@ DetermineAfterCommitWhetherToForbidTrustTokenOperation(
+   }
+   return network::mojom::TrustTokenOperationPolicyVerdict::kForbid;
+ }
++*/
+ 
+ // Verify that |browser_side_origin| and |renderer_side_origin| match.  See also
+ // https://crbug.com/888079. Returns true if the origins match, and false
+@@ -1160,12 +1162,14 @@ class RenderFrameHostImpl::SubresourceLoaderFactoriesConfig {
+       frame.coep_reporter_->Clone(
+           result.coep_reporter_.BindNewPipeAndPassReceiver());
+     }
++    /*
+     result.trust_token_redemption_policy_ =
+         DetermineAfterCommitWhetherToForbidTrustTokenOperation(
+             frame, network::mojom::TrustTokenOperationType::kRedemption);
+     result.trust_token_issuance_policy_ =
+         DetermineAfterCommitWhetherToForbidTrustTokenOperation(
+             frame, network::mojom::TrustTokenOperationType::kIssuance);
++  */
+ 
+     // Our data collection policy disallows collecting UKMs while prerendering.
+     // So, assign a valid ID only when the page is not in the prerendering
+@@ -1196,10 +1200,12 @@ class RenderFrameHostImpl::SubresourceLoaderFactoriesConfig {
+       // `trust_token_redemption_policy_` and `trust_token_issuance_policy_`
+       // plus an empty/uninitialized `coep_reporter_`.
+       result.isolation_info_ = net::IsolationInfo::CreateTransient();
++      /*
+       result.trust_token_redemption_policy_ =
+           network::mojom::TrustTokenOperationPolicyVerdict::kForbid;
+       result.trust_token_issuance_policy_ =
+           network::mojom::TrustTokenOperationPolicyVerdict::kForbid;
++      */
+     } else {
+       result.isolation_info_ =
+           navigation_request.isolation_info_for_subresources();
+@@ -1207,6 +1213,7 @@ class RenderFrameHostImpl::SubresourceLoaderFactoriesConfig {
+         navigation_request.coep_reporter()->Clone(
+             result.coep_reporter_.BindNewPipeAndPassReceiver());
+       }
++      /*
+       result.trust_token_redemption_policy_ =
+           DetermineWhetherToForbidTrustTokenOperation(
+               navigation_request.GetRenderFrameHost(),
+@@ -1217,6 +1224,7 @@ class RenderFrameHostImpl::SubresourceLoaderFactoriesConfig {
+               navigation_request.GetRenderFrameHost(),
+               navigation_request.commit_params(), result.origin(),
+               network::mojom::TrustTokenOperationType::kIssuance);
++      */
+     }
+ 
+     return result;
+@@ -1279,6 +1287,7 @@ class RenderFrameHostImpl::SubresourceLoaderFactoriesConfig {
+     return p;
+   }
+ 
++  /*
+   const network::mojom::TrustTokenOperationPolicyVerdict&
+   trust_token_redemption_policy() const {
+     return trust_token_redemption_policy_;
+@@ -1288,6 +1297,7 @@ class RenderFrameHostImpl::SubresourceLoaderFactoriesConfig {
+   trust_token_issuance_policy() const {
+     return trust_token_issuance_policy_;
+   }
++  */
+ 
+   const ukm::SourceIdObj& ukm_source_id() const { return ukm_source_id_; }
+ 
+@@ -1304,9 +1314,11 @@ class RenderFrameHostImpl::SubresourceLoaderFactoriesConfig {
+   network::mojom::ClientSecurityStatePtr client_security_state_;
+   mojo::Remote<network::mojom::CrossOriginEmbedderPolicyReporter>
+       coep_reporter_;
++  /*
+   network::mojom::TrustTokenOperationPolicyVerdict trust_token_issuance_policy_;
+   network::mojom::TrustTokenOperationPolicyVerdict
+       trust_token_redemption_policy_;
++  */
+   ukm::SourceIdObj ukm_source_id_;
+   net::CookieSettingOverrides cookie_setting_overrides_;
+ };
+@@ -2625,8 +2637,10 @@ RenderFrameHostImpl::CreateURLLoaderFactoriesForIsolatedWorlds(
+         URLLoaderFactoryParamsHelper::CreateForIsolatedWorld(
+             this, isolated_world_origin, config.origin(),
+             config.isolation_info(), config.GetClientSecurityState(),
++            /*
+             config.trust_token_issuance_policy(),
+             config.trust_token_redemption_policy(),
++            */
+             config.cookie_setting_overrides());
+ 
+     mojo::PendingRemote<network::mojom::URLLoaderFactory> factory_remote;
+@@ -8946,6 +8960,7 @@ void RenderFrameHostImpl::BeginNavigation(
+   //   trust-token-redemption Permissions Policy feature,
+   // - for issue operation, the frame's parent needs the
+   //   private-state-token-issuance Permission Policy.
++  /*
+   if (begin_params->trust_token_params) {
+     // For Fenced Frame trust_token_params shouldn't be populated since that is
+     // driven by the iframe specific attribute as defined here:
+@@ -8986,6 +9001,7 @@ void RenderFrameHostImpl::BeginNavigation(
+       return;
+     }
+   }
++  */
+ 
+   if (begin_params->is_fullscreen_requested) {
+     // Fullscreen requests on navigation are only allowed from initial empty
+@@ -11956,6 +11972,7 @@ void RenderFrameHostImpl::BindTrustTokenQueryAnswerer(
+   // Both flags are enforced in benign renderers by the
+   // RuntimeEnabled=PrivateStateTokens IDL attribute (the base::Feature's value
+   // is tied to the RuntimeEnabledFeature's).
++  /*
+   if (!base::FeatureList::IsEnabled(network::features::kPrivateStateTokens) &&
+       !base::FeatureList::IsEnabled(network::features::kFledgePst)) {
+     mojo::ReportBadMessage(
+@@ -11970,6 +11987,7 @@ void RenderFrameHostImpl::BindTrustTokenQueryAnswerer(
+   // direct way to perform such a check in the browser.
+   GetProcess()->GetStoragePartition()->CreateTrustTokenQueryAnswerer(
+       std::move(receiver), ComputeTopFrameOrigin(GetLastCommittedOrigin()));
++  */
+ }
+ 
+ void RenderFrameHostImpl::GetAudioContextManager(
+diff --git a/content/test/BUILD.gn b/content/test/BUILD.gn
+index 77b0b977f21..610494d021a 100644
+--- a/content/test/BUILD.gn
++++ b/content/test/BUILD.gn
+@@ -1344,7 +1344,6 @@ test("content_browsertests") {
+     "../browser/device_posture/device_posture_browsertest.cc",
+     "../browser/device_sensors/device_sensor_browsertest.cc",
+     "../browser/devtools/devtools_issue_storage_browsertest.cc",
+-    "../browser/devtools/devtools_trust_token_browsertest.cc",
+     "../browser/devtools/devtools_video_consumer_browsertest.cc",
+     "../browser/devtools/protocol/devtools_network_resource_loader_browsertest.cc",
+     "../browser/devtools/protocol/devtools_protocol_browsertest.cc",
+@@ -1436,10 +1435,6 @@ test("content_browsertests") {
+     "../browser/network/shared_dictionary_browsertest.cc",
+     "../browser/network/split_cache_browsertest.cc",
+     "../browser/network/transferable_socket_browsertest.cc",
+-    "../browser/network/trust_token_browsertest.cc",
+-    "../browser/network/trust_token_browsertest.h",
+-    "../browser/network/trust_token_origin_trial_browsertest.cc",
+-    "../browser/network/trust_token_parameters_browsertest.cc",
+     "../browser/network_service_browsertest.cc",
+     "../browser/network_service_restart_browsertest.cc",
+     "../browser/origin_trials/origin_trials_browsertest.cc",
+@@ -1748,7 +1743,6 @@ test("content_browsertests") {
+     "//services/metrics/public/cpp:ukm_builders",
+     "//services/network:test_support",
+     "//services/network/public/mojom",
+-    "//services/network/trust_tokens:test_support",
+     "//services/service_manager/public/cpp",
+     "//services/test/echo/public/mojom",
+     "//services/tracing:privacy_check",
+diff --git a/services/network/BUILD.gn b/services/network/BUILD.gn
+index 037ec04d3fb..796d6be51d4 100644
+--- a/services/network/BUILD.gn
++++ b/services/network/BUILD.gn
+@@ -327,7 +327,6 @@ component("network_service") {
+     "//services/network/public/mojom",
+     "//services/network/public/proto",
+     "//services/network/shared_storage",
+-    "//services/network/trust_tokens",
+     "//services/service_manager/public/cpp",
+     "//services/service_manager/public/mojom",
+     "//sql",
+@@ -558,8 +557,6 @@ source_set("tests") {
+     "//services/network/shared_storage",
+     "//services/network/shared_storage:test_support",
+     "//services/network/shared_storage:tests",
+-    "//services/network/trust_tokens",
+-    "//services/network/trust_tokens:tests",
+     "//services/service_manager/public/cpp",
+     "//services/service_manager/public/cpp/test:test_support",
+     "//sql:test_support",
+@@ -625,12 +622,6 @@ source_set("test_support") {
+     "test/test_url_loader_network_observer.h",
+     "test/test_utils.cc",
+     "test/test_utils.h",
+-    "test/trust_token_request_handler.cc",
+-    "test/trust_token_request_handler.h",
+-    "test/trust_token_test_server_handler_registration.cc",
+-    "test/trust_token_test_server_handler_registration.h",
+-    "test/trust_token_test_util.cc",
+-    "test/trust_token_test_util.h",
+     "test/udp_socket_test_util.cc",
+     "test/udp_socket_test_util.h",
+     "test/url_loader_context_for_tests.cc",
+@@ -648,8 +639,6 @@ source_set("test_support") {
+     "//services/network/public/cpp",
+     "//services/network/public/cpp:buildflags",
+     "//services/network/public/mojom",
+-    "//services/network/trust_tokens:test_support",
+-    "//services/network/trust_tokens:trust_tokens",
+   ]
+ 
+   deps = [
+diff --git a/services/network/attribution/BUILD.gn b/services/network/attribution/BUILD.gn
+index 63ab90efcd1..5a998d683fe 100644
+--- a/services/network/attribution/BUILD.gn
++++ b/services/network/attribution/BUILD.gn
+@@ -28,7 +28,6 @@ source_set("attribution") {
+     "//net",
+     "//services/network/public/cpp",
+     "//services/network/public/mojom",
+-    "//services/network/trust_tokens",
+     "//url",
+   ]
+ }
+@@ -55,8 +54,6 @@ source_set("tests") {
+     "//net:test_support",
+     "//services/network/public/cpp",
+     "//services/network/public/mojom",
+-    "//services/network/trust_tokens",
+-    "//services/network/trust_tokens:test_support",
+     "//testing/gtest",
+     "//url",
+   ]
+diff --git a/services/network/attribution/attribution_request_helper.cc b/services/network/attribution/attribution_request_helper.cc
+index 80c09b3681e..c6268cccb29 100644
+--- a/services/network/attribution/attribution_request_helper.cc
++++ b/services/network/attribution/attribution_request_helper.cc
+@@ -37,9 +37,7 @@
+ #include "services/network/public/cpp/is_potentially_trustworthy.h"
+ #include "services/network/public/cpp/resource_request.h"
+ #include "services/network/public/cpp/trigger_verification.h"
+-#include "services/network/public/cpp/trust_token_http_headers.h"
+ #include "services/network/public/mojom/url_response_head.mojom.h"
+-#include "services/network/trust_tokens/trust_token_key_commitment_getter.h"
+ #include "third_party/abseil-cpp/absl/types/optional.h"
+ #include "url/gurl.h"
+ #include "url/origin.h"
+diff --git a/services/network/attribution/attribution_verification_mediator.cc b/services/network/attribution/attribution_verification_mediator.cc
+index 71d580ae7c0..6d7fffc8791 100644
+--- a/services/network/attribution/attribution_verification_mediator.cc
++++ b/services/network/attribution/attribution_verification_mediator.cc
+@@ -19,10 +19,6 @@
+ #include "net/http/http_response_headers.h"
+ #include "net/http/structured_headers.h"
+ #include "services/network/attribution/attribution_verification_mediator_metrics_recorder.h"
+-#include "services/network/public/cpp/trust_token_http_headers.h"
+-#include "services/network/trust_tokens/suitable_trust_token_origin.h"
+-#include "services/network/trust_tokens/trust_token_key_commitment_getter.h"
+-#include "services/network/trust_tokens/types.h"
+ #include "third_party/abseil-cpp/absl/types/optional.h"
+ #include "url/origin.h"
+ 
+diff --git a/services/network/attribution/boringssl_verification_cryptographer.cc b/services/network/attribution/boringssl_verification_cryptographer.cc
+index 09a87ebdffd..19efa3c0c3a 100644
+--- a/services/network/attribution/boringssl_verification_cryptographer.cc
++++ b/services/network/attribution/boringssl_verification_cryptographer.cc
+@@ -10,8 +10,6 @@
+ #include "base/containers/span.h"
+ #include "base/strings/string_piece.h"
+ #include "base/time/time.h"
+-#include "services/network/trust_tokens/boringssl_trust_token_state.h"
+-#include "services/network/trust_tokens/scoped_boringssl_bytes.h"
+ #include "third_party/abseil-cpp/absl/types/optional.h"
+ #include "third_party/boringssl/src/include/openssl/base.h"
+ #include "third_party/boringssl/src/include/openssl/stack.h"
+diff --git a/services/network/cors/cors_url_loader_factory.cc b/services/network/cors/cors_url_loader_factory.cc
+index f1b76dca777..d4eaeeb4487 100644
+--- a/services/network/cors/cors_url_loader_factory.cc
++++ b/services/network/cors/cors_url_loader_factory.cc
+@@ -48,6 +48,7 @@ namespace {
+ // - It should be from a context where the underlying operations are permitted
+ // (as specified by URLLoaderFactoryParams::trust_token_redemption_policy and
+ // URLLoaderFactoryParams::trust_token_issuance_policy).
++/*
+ bool VerifyTrustTokenParamsIntegrityIfPresent(
+     const ResourceRequest& resource_request,
+     const NetworkContext* context,
+@@ -98,6 +99,7 @@ bool VerifyTrustTokenParamsIntegrityIfPresent(
+ 
+   return true;
+ }
++*/
+ 
+ base::debug::CrashKeyString* GetRequestInitiatorOriginLockCrashKey() {
+   static auto* crash_key = base::debug::AllocateCrashKeyString(
+@@ -212,8 +214,10 @@ CorsURLLoaderFactory::CorsURLLoaderFactory(
+       process_id_(params->process_id),
+       request_initiator_origin_lock_(params->request_initiator_origin_lock),
+       ignore_isolated_world_origin_(params->ignore_isolated_world_origin),
++      /*
+       trust_token_issuance_policy_(params->trust_token_issuance_policy),
+       trust_token_redemption_policy_(params->trust_token_redemption_policy),
++      */
+       isolation_info_(params->isolation_info),
+       automatically_assign_isolation_info_(
+           params->automatically_assign_isolation_info),
+@@ -690,6 +694,7 @@ bool CorsURLLoaderFactory::IsValidRequest(const ResourceRequest& request,
+     }
+   }
+ 
++  /*
+   if (!VerifyTrustTokenParamsIntegrityIfPresent(
+           request, context_, trust_token_issuance_policy_,
+           trust_token_redemption_policy_)) {
+@@ -697,6 +702,7 @@ bool CorsURLLoaderFactory::IsValidRequest(const ResourceRequest& request,
+     // message.
+     return false;
+   }
++  */
+ 
+   if (!net::HttpUtil::IsToken(request.method)) {
+     // Callers are expected to ensure that `method` follows RFC 7230.
+diff --git a/services/network/cors/cors_url_loader_factory.h b/services/network/cors/cors_url_loader_factory.h
+index dbb317b74f0..63dca36a3d3 100644
+--- a/services/network/cors/cors_url_loader_factory.h
++++ b/services/network/cors/cors_url_loader_factory.h
+@@ -160,8 +160,10 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) CorsURLLoaderFactory final
+   const int32_t process_id_ = mojom::kInvalidProcessId;
+   const absl::optional<url::Origin> request_initiator_origin_lock_;
+   const bool ignore_isolated_world_origin_;
++  /*
+   const mojom::TrustTokenOperationPolicyVerdict trust_token_issuance_policy_;
+   const mojom::TrustTokenOperationPolicyVerdict trust_token_redemption_policy_;
++  */
+   net::IsolationInfo isolation_info_;
+   const bool automatically_assign_isolation_info_;
+   const std::string debug_tag_;
+diff --git a/services/network/network_context.cc b/services/network/network_context.cc
+index f47ffb49ddf..7377474f772 100644
+--- a/services/network/network_context.cc
++++ b/services/network/network_context.cc
+@@ -117,7 +117,6 @@
+ #include "services/network/public/mojom/clear_data_filter.mojom.h"
+ #include "services/network/public/mojom/network_context.mojom.h"
+ #include "services/network/public/mojom/reporting_service.mojom.h"
+-#include "services/network/public/mojom/trust_tokens.mojom-forward.h"
+ #include "services/network/public/mojom/url_loader_factory.mojom.h"
+ #include "services/network/resolve_host_request.h"
+ #include "services/network/resource_scheduler/resource_scheduler_client.h"
+@@ -131,14 +130,6 @@
+ #include "services/network/throttling/network_conditions.h"
+ #include "services/network/throttling/throttling_controller.h"
+ #include "services/network/throttling/throttling_network_transaction_factory.h"
+-#include "services/network/trust_tokens/expiry_inspecting_record_expiry_delegate.h"
+-#include "services/network/trust_tokens/in_memory_trust_token_persister.h"
+-#include "services/network/trust_tokens/pending_trust_token_store.h"
+-#include "services/network/trust_tokens/sqlite_trust_token_persister.h"
+-#include "services/network/trust_tokens/suitable_trust_token_origin.h"
+-#include "services/network/trust_tokens/trust_token_parameterization.h"
+-#include "services/network/trust_tokens/trust_token_query_answerer.h"
+-#include "services/network/trust_tokens/trust_token_store.h"
+ #include "services/network/url_loader.h"
+ #include "services/network/url_request_context_builder_mojo.h"
+ #include "services/network/web_transport.h"
+@@ -157,9 +148,11 @@
+ #include "services/network/sct_auditing/sct_auditing_handler.h"
+ #endif  // BUILDFLAG(IS_CT_SUPPORTED)
+ 
++/*
+ #if BUILDFLAG(IS_CHROMEOS)
+ #include "services/network/cert_verifier_with_trust_anchors.h"
+ #endif  // BUILDFLAG(IS_CHROMEOS)
++*/
+ 
+ #if BUILDFLAG(ENABLE_WEBSOCKETS)
+ #include "services/network/websocket_factory.h"
+@@ -620,7 +613,9 @@ NetworkContext::NetworkContext(
+   CreateURLLoaderFactoryForCertNetFetcher(
+       std::move(url_loader_factory_for_cert_net_fetcher_receiver));
+ 
++  /*
+   SetBlockTrustTokens(params_->block_trust_tokens);
++  */
+ 
+   if (params_ && params_->http_cache_file_operations_factory) {
+     http_cache_file_operations_factory_ =
+@@ -907,6 +902,7 @@ void NetworkContext::OnComputedFirstPartySetMetadata(
+   restricted_cookie_managers_.insert(std::move(ptr));
+ }
+ 
++/*
+ void NetworkContext::GetTrustTokenQueryAnswerer(
+     mojo::PendingReceiver<mojom::TrustTokenQueryAnswerer> receiver,
+     const url::Origin& top_frame_origin) {
+@@ -987,6 +983,7 @@ void NetworkContext::DeleteStoredTrustTokens(
+ void NetworkContext::SetBlockTrustTokens(bool block) {
+   block_trust_tokens_ = block;
+ }
++*/
+ 
+ void NetworkContext::OnProxyLookupComplete(
+     ProxyLookupRequest* proxy_lookup_request) {
+@@ -2519,6 +2516,7 @@ URLRequestContextOwner NetworkContext::MakeURLRequestContext(
+     builder.SetCookieStore(std::move(cookie_store));
+   }
+ 
++  /*
+   if (base::FeatureList::IsEnabled(features::kPrivateStateTokens) ||
+       base::FeatureList::IsEnabled(features::kFledgePst)) {
+     trust_token_store_ = std::make_unique<PendingTrustTokenStore>();
+@@ -2542,6 +2540,7 @@ URLRequestContextOwner NetworkContext::MakeURLRequestContext(
+               network_service()->trust_token_key_commitments())));
+     }
+   }
++  */
+ 
+   std::unique_ptr<net::StaticHttpUserAgentSettings> user_agent_settings =
+       std::make_unique<net::StaticHttpUserAgentSettings>(
+diff --git a/services/network/network_context.h b/services/network/network_context.h
+index 3f51ecd9694..dacfced9cdc 100644
+--- a/services/network/network_context.h
++++ b/services/network/network_context.h
+@@ -113,7 +113,9 @@ class URLMatcher;
+ }
+ 
+ namespace network {
++/*
+ class CertVerifierWithTrustAnchors;
++*/
+ class CookieManager;
+ class HostResolver;
+ class MdnsResponderManager;
+@@ -123,13 +125,17 @@ class NetworkServiceMemoryCache;
+ class NetworkServiceNetworkDelegate;
+ class NetworkServiceProxyDelegate;
+ class P2PSocketManager;
++/*
+ class PendingTrustTokenStore;
++*/
+ class ProxyLookupRequest;
+ class ResourceSchedulerClient;
+ class SCTAuditingHandler;
+ class SessionCleanupCookieStore;
+ class SharedDictionaryManager;
++/*
+ class SQLiteTrustTokenPersister;
++*/
+ class WebSocketFactory;
+ class WebTransport;
+ 
+@@ -260,6 +266,7 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkContext
+       const net::IsolationInfo& isolation_info,
+       const net::CookieSettingOverrides& cookie_setting_overrides,
+       mojo::PendingRemote<mojom::CookieAccessObserver> observer) override;
++  /*
+   void GetTrustTokenQueryAnswerer(
+       mojo::PendingReceiver<mojom::TrustTokenQueryAnswerer> receiver,
+       const url::Origin& top_frame_origin) override;
+@@ -273,6 +280,7 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkContext
+       const url::Origin& issuer,
+       DeleteStoredTrustTokensCallback callback) override;
+   void SetBlockTrustTokens(bool block) override;
++  */
+   void ClearNetworkingHistoryBetween(
+       base::Time start_time,
+       base::Time end_time,
+@@ -392,7 +400,9 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkContext
+       mojo::PendingRemote<mojom::URLLoaderNetworkServiceObserver>
+           url_loader_network_observer,
+       mojo::PendingRemote<mojom::WebSocketAuthenticationHandler> auth_handler,
++      /*
+       mojo::PendingRemote<mojom::TrustedHeaderClient> header_client,
++      */
+       const absl::optional<base::UnguessableToken>& throttling_profile_id)
+       override;
+   void CreateWebTransport(
+@@ -613,6 +623,7 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkContext
+   // and to store information conveyed in the corresponding responses.
+   //
+   // May return null if Trust Tokens support is disabled.
++  /*
+   PendingTrustTokenStore* trust_token_store() {
+     return trust_token_store_.get();
+   }
+@@ -620,6 +631,7 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkContext
+     return trust_token_store_.get();
+   }
+   bool are_trust_tokens_blocked() const { return block_trust_tokens_; }
++  */
+ 
+   WebBundleManager& GetWebBundleManager() { return web_bundle_manager_; }
+ 
+@@ -760,8 +772,10 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkContext
+   // SQL-based) persistence layer, |FinishConstructingTrustTokenStore|
+   // constructs and populates |trust_token_store_| once the persister's
+   // asynchronous initialization has finished.
++  /*
+   void FinishConstructingTrustTokenStore(
+       std::unique_ptr<SQLiteTrustTokenPersister> persister);
++  */
+ 
+   bool IsAllowedToUseAllHttpAuthSchemes(
+       const url::SchemeHostPort& scheme_host_port);
+@@ -821,6 +835,7 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkContext
+       proxy_resolving_socket_factories_;
+ 
+   // See the comment for |trust_token_store()|.
++  /*
+   std::unique_ptr<PendingTrustTokenStore> trust_token_store_;
+ 
+   // Ordering: this must be after |trust_token_store_| since the
+@@ -832,6 +847,7 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkContext
+   // Whether the user is blocking Trust Tokens, value provided by the
+   // PrivacySandboxSettings service.
+   bool block_trust_tokens_ = false;
++  */
+ 
+ #if BUILDFLAG(ENABLE_WEBSOCKETS)
+   std::unique_ptr<WebSocketFactory> websocket_factory_;
+diff --git a/services/network/network_service.h b/services/network/network_service.h
+index 5d3cbb8b55c..f54a58f1ee1 100644
+--- a/services/network/network_service.h
++++ b/services/network/network_service.h
+@@ -53,10 +53,8 @@
+ #include "services/network/public/mojom/network_quality_estimator_manager.mojom.h"
+ #include "services/network/public/mojom/network_service.mojom.h"
+ #include "services/network/public/mojom/system_dns_resolution.mojom.h"
+-#include "services/network/public/mojom/trust_tokens.mojom.h"
+ #include "services/network/public/mojom/url_loader_network_service_observer.mojom.h"
+ #include "services/network/restricted_cookie_manager.h"
+-#include "services/network/trust_tokens/trust_token_key_commitments.h"
+ #include "services/service_manager/public/cpp/binder_registry.h"
+ #include "third_party/abseil-cpp/absl/types/optional.h"
+ 
+@@ -201,8 +199,10 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkService
+ #endif
+   void SetEnvironment(
+       std::vector<mojom::EnvironmentVariablePtr> environment) override;
++  /*
+   void SetTrustTokenKeyCommitments(const std::string& raw_commitments,
+                                    base::OnceClosure done) override;
++  */
+   void ParseHeaders(const GURL& url,
+                     const scoped_refptr<net::HttpResponseHeaders>& headers,
+                     ParseHeadersCallback callback) override;
+@@ -321,9 +321,11 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkService
+   // same object (although the object's state can change on updates to the
+   // commitments). As a consequence, it's safe to store long-lived copies of the
+   // pointer.
++  /*
+   const TrustTokenKeyCommitments* trust_token_key_commitments() const {
+     return trust_token_key_commitments_.get();
+   }
++  */
+ 
+ #if BUILDFLAG(IS_CT_SUPPORTED)
+   SCTAuditingCache* sct_auditing_cache() { return sct_auditing_cache_.get(); }
+@@ -472,7 +474,9 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) NetworkService
+   // Globally-scoped cryptographic state for the Trust Tokens protocol
+   // (https://github.com/wicg/trust-token-api), updated via a Mojo IPC and
+   // provided to NetworkContexts via the getter.
++  /*
+   std::unique_ptr<TrustTokenKeyCommitments> trust_token_key_commitments_;
++  */
+ 
+   std::unique_ptr<DelayedDohProbeActivator> doh_probe_activator_;
+ 
+diff --git a/services/network/oblivious_http_request_handler.cc b/services/network/oblivious_http_request_handler.cc
+index 443fc9dfb6d..39f4d5d7461 100644
+--- a/services/network/oblivious_http_request_handler.cc
++++ b/services/network/oblivious_http_request_handler.cc
+@@ -13,7 +13,9 @@
+ #include "mojo/public/cpp/bindings/remote_set.h"
+ #include "net/base/load_flags.h"
+ #include "net/http/http_log_util.h"
++/*
+ #include "net/http/http_request_headers.h"
++*/
+ #include "net/http/http_status_code.h"
+ #include "net/http/http_util.h"
+ #include "net/log/net_log_capture_mode.h"
+@@ -31,7 +33,9 @@
+ #include "services/network/public/mojom/oblivious_http_request.mojom.h"
+ #include "services/network/public/mojom/url_loader_factory.mojom.h"
+ #include "services/network/public/mojom/url_response_head.mojom.h"
++/*
+ #include "services/network/trust_tokens/trust_token_request_helper_factory.h"
++*/
+ 
+ namespace network {
+ 
+@@ -154,8 +158,10 @@ class ObliviousHttpRequestHandler::RequestState {
+  public:
+   mojom::ObliviousHttpRequestPtr request;
+   std::unique_ptr<SimpleURLLoader> loader;
++  /*
+   std::unique_ptr<TrustTokenRequestHelperFactory> trust_token_helper_factory;
+   std::unique_ptr<TrustTokenRequestHelper> trust_token_helper;
++  */
+   net::NetLogWithSource net_log;
+   absl::optional<StatefulObliviousHttpClient> ohttp_client;
+ };
+@@ -216,6 +222,7 @@ void ObliviousHttpRequestHandler::StartRequest(
+       net::NetLog::Get(), net::NetLogSourceType::URL_REQUEST);
+   state->net_log.BeginEvent(net::NetLogEventType::OBLIVIOUS_HTTP_REQUEST);
+ 
++  /*
+   if (state->request->trust_token_params) {
+     state->trust_token_helper_factory =
+         std::make_unique<TrustTokenRequestHelperFactory>(
+@@ -250,7 +257,7 @@ void ObliviousHttpRequestHandler::StartRequest(
+             base::Unretained(this), id));
+     return;
+   }
+-  ContinueHandlingRequest(/*headers=*/absl::nullopt, id);
++  ContinueHandlingRequest(*headers=*absl::nullopt, id);
+ }
+ 
+ void ObliviousHttpRequestHandler::OnDoneConstructingTrustTokenHelper(
+@@ -258,7 +265,7 @@ void ObliviousHttpRequestHandler::OnDoneConstructingTrustTokenHelper(
+     TrustTokenStatusOrRequestHelper status_or_helper) {
+   if (!status_or_helper.ok()) {
+     RespondWithError(id, net::ERR_TRUST_TOKEN_OPERATION_FAILED,
+-                     /*outer_response_error_code=*/absl::nullopt);
++                     *outer_response_error_code=*absl::nullopt);
+     return;
+   }
+ 
+@@ -281,7 +288,7 @@ void ObliviousHttpRequestHandler::OnDoneBeginningTrustTokenOperation(
+     mojom::TrustTokenOperationStatus status) {
+   if (status != mojom::TrustTokenOperationStatus::kOk) {
+     RespondWithError(id, net::ERR_TRUST_TOKEN_OPERATION_FAILED,
+-                     /*outer_response_error_code=*/absl::nullopt);
++                     *outer_response_error_code=*absl::nullopt);
+     return;
+   }
+   ContinueHandlingRequest(std::move(headers), id);
+@@ -290,6 +297,8 @@ void ObliviousHttpRequestHandler::OnDoneBeginningTrustTokenOperation(
+ void ObliviousHttpRequestHandler::ContinueHandlingRequest(
+     absl::optional<net::HttpRequestHeaders> headers,
+     mojo::RemoteSetElementId id) {
++NOT SURE
++*/
+   auto state_iter = client_state_.find(id);
+   DCHECK(state_iter != client_state_.end());
+   RequestState* state = state_iter->second.get();
+@@ -477,6 +486,7 @@ void ObliviousHttpRequestHandler::OnRequestComplete(
+     return;
+   }
+ 
++  /*
+   if (state->trust_token_helper) {
+     state->trust_token_helper->Finalize(
+         *headers,
+@@ -486,11 +496,13 @@ void ObliviousHttpRequestHandler::OnRequestComplete(
+             std::string(bhttp_response->body())));
+     return;
+   }
++  */
+ 
+   NotifyComplete(id, inner_status_code, std::move(headers),
+                  std::string(bhttp_response->body()));
+ }
+ 
++/*
+ void ObliviousHttpRequestHandler::OnDoneFinalizingTrustTokenOperation(
+     mojo::RemoteSetElementId id,
+     int inner_response_code,
+@@ -499,11 +511,12 @@ void ObliviousHttpRequestHandler::OnDoneFinalizingTrustTokenOperation(
+     mojom::TrustTokenOperationStatus status) {
+   if (status != mojom::TrustTokenOperationStatus::kOk) {
+     RespondWithError(id, net::ERR_TRUST_TOKEN_OPERATION_FAILED,
+-                     /*outer_response_error_code=*/absl::nullopt);
++                     *outer_response_error_code=*absl::nullopt);
+     return;
+   }
+   NotifyComplete(id, inner_response_code, std::move(headers), std::move(body));
+ }
++*/
+ 
+ void ObliviousHttpRequestHandler::NotifyComplete(
+     mojo::RemoteSetElementId id,
+diff --git a/services/network/oblivious_http_request_handler.h b/services/network/oblivious_http_request_handler.h
+index ee6385846b3..4f53e6624a0 100644
+--- a/services/network/oblivious_http_request_handler.h
++++ b/services/network/oblivious_http_request_handler.h
+@@ -56,6 +56,8 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) ObliviousHttpRequestHandler {
+  private:
+   class RequestState;
+ 
++  /*
++  Landed in https://chromium-review.googlesource.com/c/chromium/src/+/3947284/1
+   // Callback from TrustTokenRequestHelperFactory during HandleRequest. Verifies
+   // trust token helper was created correctly and calls Begin() on it to start
+   // the trust token operation with headers stored in the RequestState.
+@@ -75,6 +77,7 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) ObliviousHttpRequestHandler {
+   // SimpleURLLoader.
+   void ContinueHandlingRequest(absl::optional<net::HttpRequestHeaders> headers,
+                                mojo::RemoteSetElementId id);
++  */
+ 
+   // Calls the completed event with the specified net error code and HTTP
+   // response error code on the corresponding client. The client with the
+@@ -88,6 +91,7 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) ObliviousHttpRequestHandler {
+   void OnRequestComplete(mojo::RemoteSetElementId id,
+                          std::unique_ptr<std::string> response);
+ 
++  /*
+   // Callback from TrustTokenRequestHelper::Finalize. Checks that the trust
+   // token operation completed successfully and calls the client with the
+   // result.
+@@ -97,6 +101,7 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) ObliviousHttpRequestHandler {
+       scoped_refptr<net::HttpResponseHeaders> headers,
+       std::string body,
+       mojom::TrustTokenOperationStatus status);
++  */
+ 
+   // Notifies the client that the request completed successfully with the
+   // provided response headers and body.
+@@ -106,7 +111,9 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) ObliviousHttpRequestHandler {
+                       std::string body);
+ 
+   // Handles cleaning up when an ObliviousHttpClient disconnects.
++  /*
+   void OnClientDisconnect(mojo::RemoteSetElementId id);
++  */
+ 
+   mojom::URLLoaderFactory* GetURLLoaderFactory();
+ 
+diff --git a/services/network/public/cpp/features.h b/services/network/public/cpp/features.h
+index eeca662d6b5..69641c784c6 100644
+--- a/services/network/public/cpp/features.h
++++ b/services/network/public/cpp/features.h
+@@ -56,6 +56,7 @@ BASE_DECLARE_FEATURE(kAttributionReportingCrossAppWeb);
+ // kFledgePst is the original flag used in the OT and respects
+ // the TrustTrialOriginTrialSpec. It will be deprecated in favor of
+ // kPrivateStateTokens when the experiment is over.
++/*
+ COMPONENT_EXPORT(NETWORK_CPP) BASE_DECLARE_FEATURE(kPrivateStateTokens);
+ COMPONENT_EXPORT(NETWORK_CPP) BASE_DECLARE_FEATURE(kFledgePst);
+ 
+@@ -69,6 +70,7 @@ COMPONENT_EXPORT(NETWORK_CPP)
+ extern const base::FeatureParam<TrustTokenOriginTrialSpec>
+     kTrustTokenOperationsRequiringOriginTrial;
+ COMPONENT_EXPORT(NETWORK_CPP)
++*/
+ 
+ COMPONENT_EXPORT(NETWORK_CPP)
+ BASE_DECLARE_FEATURE(kWebSocketReassembleShortMessages);
+diff --git a/services/network/public/mojom/network_context.mojom b/services/network/public/mojom/network_context.mojom
+index 0af72774371..3f32ae93cee 100644
+--- a/services/network/public/mojom/network_context.mojom
++++ b/services/network/public/mojom/network_context.mojom
+@@ -54,8 +54,8 @@ import "services/network/public/mojom/socket_broker.mojom";
+ import "services/network/public/mojom/ssl_config.mojom";
+ import "services/network/public/mojom/tcp_socket.mojom";
+ import "services/network/public/mojom/transferable_directory.mojom";
+-import "services/network/public/mojom/trust_tokens.mojom";
+-import "services/network/public/mojom/trust_token_access_observer.mojom";
++// import "services/network/public/mojom/trust_tokens.mojom";
++// import "services/network/public/mojom/trust_token_access_observer.mojom";
+ import "services/network/public/mojom/udp_socket.mojom";
+ import "services/network/public/mojom/url_loader.mojom";
+ import "services/network/public/mojom/url_loader_factory.mojom";
+@@ -73,8 +73,8 @@ import "services/network/public/mojom/dhcp_wpad_url_client.mojom";
+ [EnableIf=is_p2p_enabled]
+ import "services/network/public/mojom/p2p.mojom";
+ 
+-[EnableIf=is_p2p_enabled]
+-import "services/network/public/mojom/p2p_trusted.mojom";
++// [EnableIf=is_p2p_enabled]
++// import "services/network/public/mojom/p2p_trusted.mojom";
+ 
+ [EnableIf=is_win]
+ import "services/proxy_resolver_win/public/mojom/proxy_resolver_win.mojom";
+@@ -271,7 +271,7 @@ struct NetworkContextFilePaths {
+   //
+   // Initializing the on-disk database takes place asynchronously, so requests
+   // near startup may not support Trust Tokens protocol operations.
+-  mojo_base.mojom.FilePath? trust_token_database_name;
++  // mojo_base.mojom.FilePath? trust_token_database_name;
+ 
+   // The name of the file to store cached server properties (Like HTTP2 and QUIC
+   // support) inside `data_directory`. This information is used as a performance
+@@ -565,7 +565,7 @@ struct NetworkContextParams {
+   NetworkContextFilePaths? file_paths;
+ 
+   // Is true, Trust Token operations should be blocked.
+-  bool block_trust_tokens;
++  // bool block_trust_tokens;
+ 
+   // Whether "Compression dictionary transport" feature should be enabled.
+   bool shared_dictionary_enabled = false;
+@@ -685,10 +685,10 @@ struct URLLoaderFactoryOverride {
+ // - If the renderer doesn't behave correctly, there's no point in
+ // propagating the renderer's untrusted report about the response headers'
+ // value.
+-enum TrustTokenOperationPolicyVerdict {
+-  kForbid,
+-  kPotentiallyPermit,
+-};
++// enum TrustTokenOperationPolicyVerdict {
++//  kForbid,
++//  kPotentiallyPermit,
++// };
+ 
+ [EnableIf=is_ct_supported]
+ enum SCTAuditingMode {
+@@ -802,7 +802,7 @@ struct URLLoaderFactoryParams {
+   pending_remote<CookieAccessObserver>? cookie_observer;
+ 
+   // Used to notify clients about Trust Token accesses.
+-  pending_remote<TrustTokenAccessObserver>? trust_token_observer;
++  // pending_remote<TrustTokenAccessObserver>? trust_token_observer;
+ 
+   // Used to notify clients about shared dictionary reads or writes.
+   pending_remote<SharedDictionaryAccessObserver>? shared_dictionary_observer;
+@@ -820,8 +820,8 @@ struct URLLoaderFactoryParams {
+   // TODO(crbug.com/1071848): Once Permissions Policy headers are available from
+   // a trusted source, it would be good to set this depending on the headers'
+   // values, too.
+-  TrustTokenOperationPolicyVerdict
+-      trust_token_issuance_policy = kPotentiallyPermit;
++  // TrustTokenOperationPolicyVerdict
++  //    trust_token_issuance_policy = kPotentiallyPermit;
+ 
+   // If this equals kForbid, the context to which this loader is bound does not
+   // allow any Trust Tokens (https://github.com/wicg/trust-token-api)
+@@ -830,8 +830,8 @@ struct URLLoaderFactoryParams {
+   // TODO(crbug.com/1071848): Once Permissions Policy headers are available from
+   // a trusted source, it would be good to set this depending on the headers'
+   // values, too.
+-  TrustTokenOperationPolicyVerdict
+-      trust_token_redemption_policy = kPotentiallyPermit;
++  // TrustTokenOperationPolicyVerdict
++  //    trust_token_redemption_policy = kPotentiallyPermit;
+ 
+   // TODO(lukasza): https://crbug.com/1151008: Consider removing this
+   // diagnostic aid once the bug is understood.
+@@ -1000,33 +1000,33 @@ interface NetworkContext {
+   // The first is a general security requirement; the second is in order to
+   // ensure that the origin has a unique serialization (and, consequently, is
+   // suitable for keying persistent Trust Tokens state).
+-  GetTrustTokenQueryAnswerer(
+-      pending_receiver<TrustTokenQueryAnswerer> trust_token_query_answerer,
+-      url.mojom.Origin top_frame_origin);
++  // GetTrustTokenQueryAnswerer(
++  //    pending_receiver<TrustTokenQueryAnswerer> trust_token_query_answerer,
++  //    url.mojom.Origin top_frame_origin);
+ 
+   // Clears persistent Trust Tokens data keyed by the origins in |filter|, and
+   // by origins corresponding to the domains in |filter|.
+   //
+   // A null |filter| indicates that all Trust Tokens data should be cleared.
+-  ClearTrustTokenData(ClearDataFilter? filter) => ();
++  // ClearTrustTokenData(ClearDataFilter? filter) => ();
+ 
+   // Clears session only Trust Tokens data. Depends on CookieSettings
+   // at determining which data is session only.
+-  ClearTrustTokenSessionOnlyData() => (bool any_data_deleted);
++  // ClearTrustTokenSessionOnlyData() => (bool any_data_deleted);
+ 
+   // Returns the number of signed-but-not-spent Trust Tokens.
+-  GetStoredTrustTokenCounts()
+-      => (array<StoredTrustTokensForIssuer> tokens);
++  // GetStoredTrustTokenCounts()
++  //    => (array<StoredTrustTokensForIssuer> tokens);
+ 
+   // Deletes all Trust Tokens issued by |issuer|.
+   //
+   // This method is narrower as ClearTrustTokenData. ClearTrustTokenData
+   // also clears out Redemption Records.
+-  DeleteStoredTrustTokens(url.mojom.Origin issuer)
+-      => (DeleteStoredTrustTokensStatus status);
++  // DeleteStoredTrustTokens(url.mojom.Origin issuer)
++  //    => (DeleteStoredTrustTokensStatus status);
+ 
+   // Set Trust Token blocking to |block|.
+-  SetBlockTrustTokens(bool block);
++  // SetBlockTrustTokens(bool block);
+ 
+   // Clears network objects with implicit URL history information. Data related
+   // to events that happened prior to |start_time| and after |end_time| may be
+diff --git a/services/network/url_loader.cc b/services/network/url_loader.cc
+index b6eb95bb160..2993b77d9f0 100644
+--- a/services/network/url_loader.cc
++++ b/services/network/url_loader.cc
+@@ -96,7 +96,9 @@
+ #include "services/network/shared_dictionary/shared_dictionary_access_checker.h"
+ #include "services/network/shared_storage/shared_storage_request_helper.h"
+ #include "services/network/throttling/scoped_throttling_token.h"
++/*
+ #include "services/network/trust_tokens/trust_token_request_helper.h"
++*/
+ #include "services/network/url_loader_factory.h"
+ #include "third_party/abseil-cpp/absl/types/optional.h"
+ #include "url/origin.h"
+@@ -457,10 +459,14 @@ URLLoader::URLLoader(
+     uint32_t request_id,
+     int keepalive_request_size,
+     base::WeakPtr<KeepaliveStatisticsRecorder> keepalive_statistics_recorder,
++    /*
+     std::unique_ptr<TrustTokenRequestHelperFactory> trust_token_helper_factory,
++    */
+     std::unique_ptr<SharedDictionaryAccessChecker> shared_dictionary_checker,
+     mojo::PendingRemote<mojom::CookieAccessObserver> cookie_observer,
++    /*
+     mojo::PendingRemote<mojom::TrustTokenAccessObserver> trust_token_observer,
++    */
+     mojo::PendingRemote<mojom::URLLoaderNetworkServiceObserver>
+         url_loader_network_observer,
+     mojo::PendingRemote<mojom::DevToolsObserver> devtools_observer,
+@@ -505,17 +511,21 @@ URLLoader::URLLoader(
+           request,
+           factory_params_->client_security_state.get(),
+           options_),
++      /*
+       trust_token_helper_factory_(std::move(trust_token_helper_factory)),
++      */
+       shared_dictionary_checker_(std::move(shared_dictionary_checker)),
+       attribution_request_helper_(std::move(attribution_request_helper)),
+       origin_access_list_(context.GetOriginAccessList()),
+       cookie_observer_remote_(std::move(cookie_observer)),
+       cookie_observer_(PtrOrFallback(cookie_observer_remote_,
+                                      context.GetCookieAccessObserver())),
++      /*
+       trust_token_observer_remote_(std::move(trust_token_observer)),
+       trust_token_observer_(
+           PtrOrFallback(trust_token_observer_remote_,
+                         context.GetTrustTokenAccessObserver())),
++      */
+       url_loader_network_observer_remote_(
+           std::move(url_loader_network_observer)),
+       url_loader_network_observer_(
+@@ -702,7 +712,9 @@ URLLoader::URLLoader(
+     return;
+   }
+ 
++  /*
+   ProcessOutboundTrustTokenInterceptor(request);
++  */
+ }
+ 
+ // This class is used to manage the queue of pending file upload operations
+@@ -862,7 +874,9 @@ void URLLoader::SetUpUpload(const ResourceRequest& request,
+                             base::Unretained(this)),
+         url_request_.get());
+   }
++  /*
+   ProcessOutboundTrustTokenInterceptor(request);
++  */
+ }
+ 
+ void URLLoader::ProcessOutboundSharedStorageInterceptor() {
+@@ -885,6 +899,7 @@ void URLLoader::ProcessOutboundAttributionInterceptor() {
+                      weak_ptr_factory_.GetWeakPtr()));
+ }
+ 
++/*
+ void URLLoader::ProcessOutboundTrustTokenInterceptor(
+     const ResourceRequest& request) {
+   if (!request.trust_token_params) {
+@@ -999,7 +1014,7 @@ void URLLoader::OnDoneBeginningTrustTokenOperation(
+     DCHECK(headers);
+     for (const auto& header_pair : headers->GetHeaderVector()) {
+       url_request_->SetExtraRequestHeaderByName(
+-          header_pair.key, header_pair.value, /*overwrite=*/true);
++          header_pair.key, header_pair.value, *overwrite=*true);
+     }
+ 
+     ProcessOutboundAttributionInterceptor();
+@@ -1023,6 +1038,7 @@ void URLLoader::OnDoneBeginningTrustTokenOperation(
+                                   net::ERR_TRUST_TOKEN_OPERATION_FAILED));
+   }
+ }
++*/
+ 
+ void URLLoader::ScheduleStart() {
+   bool defer = false;
+@@ -1600,6 +1616,7 @@ void URLLoader::OnResponseStarted(net::URLRequest* url_request, int net_error) {
+ 
+   // Parse and remove the Trust Tokens response headers, if any are expected,
+   // potentially failing the request if an error occurs.
++  /*
+   if (response_ && response_->headers && trust_token_helper_) {
+     DCHECK(response_);
+     trust_token_helper_->Finalize(
+@@ -1609,6 +1626,7 @@ void URLLoader::OnResponseStarted(net::URLRequest* url_request, int net_error) {
+     // |this| may have been deleted.
+     return;
+   }
++  */
+ 
+   if (memory_cache_) {
+     memory_cache_writer_ = memory_cache_->MaybeCreateWriter(
+@@ -1618,6 +1636,7 @@ void URLLoader::OnResponseStarted(net::URLRequest* url_request, int net_error) {
+   ProcessInboundAttributionInterceptorOnResponseStarted();
+ }
+ 
++/*
+ void URLLoader::OnDoneFinalizingTrustTokenOperation(
+     mojom::TrustTokenOperationStatus status) {
+   trust_token_status_ = status;
+@@ -1645,6 +1664,7 @@ void URLLoader::MaybeSendTrustTokenOperationResultToDevTools() {
+   devtools_observer_->OnTrustTokenOperationDone(devtools_request_id().value(),
+                                                 std::move(operation_result));
+ }
++*/
+ 
+ void URLLoader::ContinueOnResponseStarted() {
+   MojoCreateDataPipeOptions options;
+@@ -2109,8 +2129,10 @@ void URLLoader::NotifyCompleted(int error_code) {
+     status.proxy_server = url_request_->proxy_server();
+     status.resolve_error_info =
+         url_request_->response_info().resolve_error_info;
++    /*
+     if (trust_token_status_)
+       status.trust_token_operation_status = *trust_token_status_;
++    */
+     status.cors_error_status = cors_error_status_;
+ 
+     if ((options_ & mojom::kURLLoadOptionSendSSLInfoForCertificateError) &&
+diff --git a/services/network/url_loader.h b/services/network/url_loader.h
+index 5ac365a6aa5..c94fe2db125 100644
+--- a/services/network/url_loader.h
++++ b/services/network/url_loader.h
+@@ -49,17 +49,21 @@
+ #include "services/network/public/mojom/ip_address_space.mojom-forward.h"
+ #include "services/network/public/mojom/ip_address_space.mojom-shared.h"
+ #include "services/network/public/mojom/network_service.mojom.h"
++/*
+ #include "services/network/public/mojom/trust_token_access_observer.mojom.h"
+ #include "services/network/public/mojom/trust_tokens.mojom-shared.h"
++*/
+ #include "services/network/public/mojom/url_loader.mojom.h"
+ #include "services/network/public/mojom/url_response_head.mojom-forward.h"
+ #include "services/network/resource_scheduler/resource_scheduler.h"
+ #include "services/network/resource_scheduler/resource_scheduler_client.h"
+ #include "services/network/shared_dictionary/shared_dictionary_access_checker.h"
+ #include "services/network/shared_storage/shared_storage_request_helper.h"
++/*
+ #include "services/network/trust_tokens/pending_trust_token_store.h"
+ #include "services/network/trust_tokens/trust_token_request_helper.h"
+ #include "services/network/trust_tokens/trust_token_request_helper_factory.h"
++*/
+ #include "services/network/upload_progress_tracker.h"
+ #include "services/network/url_loader_context.h"
+ #include "third_party/abseil-cpp/absl/types/optional.h"
+@@ -165,11 +169,15 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) URLLoader
+       uint32_t request_id,
+       int keepalive_request_size,
+       base::WeakPtr<KeepaliveStatisticsRecorder> keepalive_statistics_recorder,
++      /*
+       std::unique_ptr<TrustTokenRequestHelperFactory>
+           trust_token_helper_factory,
++      */
+       std::unique_ptr<SharedDictionaryAccessChecker> shared_dictionary_checker,
+       mojo::PendingRemote<mojom::CookieAccessObserver> cookie_observer,
++      /*
+       mojo::PendingRemote<mojom::TrustTokenAccessObserver> trust_token_observer,
++      */
+       mojo::PendingRemote<mojom::URLLoaderNetworkServiceObserver>
+           url_loader_network_observer,
+       mojo::PendingRemote<mojom::DevToolsObserver> devtools_observer,
+@@ -470,6 +478,7 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) URLLoader
+   //   - receive the result in OnDoneFinalizingTrustTokenOperation;
+   //   - if successful, ProcessInboundAttributionInterceptorOnResponseStarted;
+   //   if there was an error, fail.
++  /*
+   void ProcessOutboundTrustTokenInterceptor(const ResourceRequest& request);
+   void OnDoneConstructingTrustTokenHelper(
+       mojom::TrustTokenOperationType type,
+@@ -479,12 +488,15 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) URLLoader
+       mojom::TrustTokenOperationStatus status);
+   void OnDoneFinalizingTrustTokenOperation(
+       mojom::TrustTokenOperationStatus status);
++  */
+ 
+   // Continuation of `OnResponseStarted` after possibly asynchronously
+   // concluding the request's Trust Tokens, Attribution, and/or Shared Storage
+   // operations.
+   void ContinueOnResponseStarted();
++  /*
+   void MaybeSendTrustTokenOperationResultToDevTools();
++  */
+ 
+   void ScheduleStart();
+   void ReadMore();
+@@ -701,6 +713,7 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) URLLoader
+   // is constructed (using |trust_token_helper_factory_|) just before the
+   // outbound (Begin) operation; for requests without associated Trust Tokens
+   // operations, the field remains null, as does |trust_token_helper_factory_|.
++  /*
+   std::unique_ptr<TrustTokenRequestHelper> trust_token_helper_;
+   std::unique_ptr<TrustTokenRequestHelperFactory> trust_token_helper_factory_;
+ 
+@@ -710,6 +723,7 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) URLLoader
+   // codes, like kFailedPrecondition (outbound) and kBadResponse (inbound) are
+   // specific to one direction.
+   absl::optional<mojom::TrustTokenOperationStatus> trust_token_status_;
++  */
+ 
+   // This is used to determine whether it is allowed to use a dictionary when
+   // there is a matching shared dictionary for the request.
+@@ -742,10 +756,12 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) URLLoader
+   // URLLoaderFactory).
+   const mojo::Remote<mojom::CookieAccessObserver> cookie_observer_remote_;
+   const raw_ptr<mojom::CookieAccessObserver> cookie_observer_ = nullptr;
++  /*
+   const mojo::Remote<mojom::TrustTokenAccessObserver>
+       trust_token_observer_remote_;
+   const raw_ptr<mojom::TrustTokenAccessObserver> trust_token_observer_ =
+       nullptr;
++  */
+   const mojo::Remote<mojom::URLLoaderNetworkServiceObserver>
+       url_loader_network_observer_remote_;
+   const raw_ptr<mojom::URLLoaderNetworkServiceObserver>
+diff --git a/services/network/url_loader_factory.cc b/services/network/url_loader_factory.cc
+index 3dfe26ee59f..21f2aefb05a 100644
+--- a/services/network/url_loader_factory.cc
++++ b/services/network/url_loader_factory.cc
+@@ -32,7 +32,9 @@
+ #include "services/network/public/mojom/network_context.mojom.h"
+ #include "services/network/resource_scheduler/resource_scheduler_client.h"
+ #include "services/network/shared_dictionary/shared_dictionary_access_checker.h"
++/*
+ #include "services/network/trust_tokens/trust_token_request_helper_factory.h"
++*/
+ #include "services/network/url_loader.h"
+ #include "services/network/web_bundle/web_bundle_url_loader_factory.h"
+ #include "third_party/abseil-cpp/absl/types/optional.h"
+@@ -85,7 +87,9 @@ URLLoaderFactory::URLLoaderFactory(
+       header_client_(std::move(params_->header_client)),
+       cors_url_loader_factory_(cors_url_loader_factory),
+       cookie_observer_(std::move(params_->cookie_observer)),
++      /*
+       trust_token_observer_(std::move(params_->trust_token_observer)),
++      */
+       devtools_observer_(std::move(params_->devtools_observer)) {
+   DCHECK(context);
+   DCHECK_NE(mojom::kInvalidProcessId, params_->process_id);
+diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
+index 6f73c6b3000..88114113fed 100644
+--- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
++++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
+@@ -2999,24 +2999,6 @@
+       name: "PrivateNetworkAccessPermissionPrompt",
+       base_feature: "none",
+     },
+-    {
+-      name: "PrivateStateTokens",
+-      // status: "test",
+-      base_feature: "none",
+-      origin_trial_feature_name: "TrustTokens",
+-      origin_trial_allows_third_party: true,
+-      public: true,
+-    },
+-    {
+-      // Always allow trust token issuance (so long as the base::Feature
+-      // is enabled). Used for testing; circumvents a runtime check that,
+-      // if this RuntimeEnabledFeature is not present, guarantees the origin
+-      // trial is enabled.
+-      name: "PrivateStateTokensAlwaysAllowIssuance",
+-      public: true,
+-      status: "test",
+-      base_feature: "none",
+-    },
+     {
+       name: "PushMessaging",
+       public: true,

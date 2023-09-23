@@ -1,0 +1,11 @@
+{
+  "runtime_enabled_features": ["PrivateStateTokens", "PrivateStateTokensAlwaysAllowIssuance"],
+  "remove_folders": [
+    "services/network/trust_tokens/",
+    "services/network/public/cpp/trust_token_http_headers.h"
+  ],
+  "cli": [
+    "additional-private-state-token-key-commitments"
+  ],
+  "data": []
+}

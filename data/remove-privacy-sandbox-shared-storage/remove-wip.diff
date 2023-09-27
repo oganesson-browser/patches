@@ -1,0 +1,212 @@
+diff --git a/content/browser/renderer_host/frame_tree_node.h b/content/browser/renderer_host/frame_tree_node.h
+index d534ebcb68b..2439ac0f775 100644
+--- a/content/browser/renderer_host/frame_tree_node.h
++++ b/content/browser/renderer_host/frame_tree_node.h
+@@ -298,7 +298,7 @@ class CONTENT_EXPORT FrameTreeNode : public RenderFrameHostOwner {
+   // should take for the navigation(s) on this frame. If true, the network
+   // service will send the `Shared-Storage-Write` request header.
+   bool shared_storage_writable() const {
+-    return attributes_->shared_storage_writable;
++    return false;
+   }
+   const absl::optional<std::string> html_id() const { return attributes_->id; }
+   // This tracks iframe's 'name' attribute instead of window.name, which is
+diff --git a/content/browser/renderer_host/navigation_request.cc b/content/browser/renderer_host/navigation_request.cc
+index 7f3103908ba..b093bf70470 100644
+--- a/content/browser/renderer_host/navigation_request.cc
++++ b/content/browser/renderer_host/navigation_request.cc
+@@ -89,7 +89,6 @@
+ #include "content/browser/scoped_active_url.h"
+ #include "content/browser/service_worker/service_worker_context_wrapper.h"
+ #include "content/browser/service_worker/service_worker_main_resource_handle.h"
+-#include "content/browser/shared_storage/shared_storage_header_observer.h"
+ #include "content/browser/site_info.h"
+ #include "content/browser/site_instance_impl.h"
+ #include "content/browser/storage_partition_impl.h"
+@@ -240,8 +239,6 @@ const char kIsolatedAppCSP[] =
+     "style-src 'self' 'unsafe-inline';"
+     "require-trusted-types-for 'script';";
+ 
+-const char kSharedStorageWritableRequestHeaderKey[] = "Shared-Storage-Writable";
+-
+ // Denotes the type of user agent string value sent in the User-Agent request
+ // header.
+ //
+@@ -1054,6 +1051,7 @@ network::mojom::WebSandboxFlags GetSandboxFlagsInitiator(
+   return policy_container_host->policies().sandbox_flags;
+ }
+ 
++/*
+ bool IsSharedStorageWritableForNavigationRequest(FrameTreeNode* frame_tree_node,
+                                                  const GURL& url) {
+   // False if the <iframe> does not have the "sharedstoragewritable" opt-in
+@@ -1093,6 +1091,7 @@ bool IsSharedStorageWritableForNavigationRequest(FrameTreeNode* frame_tree_node,
+   return parent_policy->IsFeatureEnabledForOrigin(
+       blink::mojom::PermissionsPolicyFeature::kSharedStorage, origin);
+ }
++*/
+ 
+ }  // namespace
+ 
+@@ -1710,12 +1709,6 @@ NavigationRequest::NavigationRequest(
+         blink::kFencedFrameForcedSandboxFlags;
+   }
+ 
+-  if (base::FeatureList::IsEnabled(blink::features::kSharedStorageAPI) &&
+-      base::FeatureList::IsEnabled(blink::features::kSharedStorageAPIM118)) {
+-    shared_storage_writable_ = IsSharedStorageWritableForNavigationRequest(
+-        frame_tree_node_, common_params_->url);
+-  }
+-
+   if (from_begin_navigation_) {
+     // This is needed to have data URLs commit in the same SiteInstance as the
+     // initiating renderer.
+@@ -4947,7 +4940,7 @@ void NavigationRequest::OnStartChecksComplete(
+           BuildClientSecurityStateForNavigationFetch(),
+           devtools_accepted_stream_types, is_pdf_, initiator_document_,
+           GetPreviousRenderFrameHostId(), allow_cookies_from_browser_,
+-          navigation_id_, shared_storage_writable_),
++          navigation_id_, false),
+       std::move(navigation_ui_data), service_worker_handle_.get(),
+       std::move(prefetched_signed_exchange_cache_), this, loader_type,
+       CreateCookieAccessObserver(), CreateTrustTokenAccessObserver(),
+@@ -5123,16 +5116,6 @@ void NavigationRequest::OnRedirectChecksComplete(
+                                *topics_header_value);
+   }
+ 
+-  if (shared_storage_writable_) {
+-    // On a redirect, the PermissionsPolicy may change the status of this
+-    // request's Shared Storage eligibility, so we need to re-compute it.
+-    shared_storage_writable_ = IsSharedStorageWritableForNavigationRequest(
+-        frame_tree_node_, common_params_->url);
+-    if (!shared_storage_writable_) {
+-      removed_headers.push_back(kSharedStorageWritableRequestHeaderKey);
+-    }
+-  }
+-
+   // Removes all Client Hints from the request, that were passed on from the
+   // previous one.
+   for (const auto& elem : network::GetClientHintToNameMap()) {
+diff --git a/content/browser/renderer_host/navigation_request.h b/content/browser/renderer_host/navigation_request.h
+index 77f7b4f3d8f..4a80fce409f 100644
+--- a/content/browser/renderer_host/navigation_request.h
++++ b/content/browser/renderer_host/navigation_request.h
+@@ -1249,7 +1249,7 @@ class CONTENT_EXPORT NavigationRequest
+     return std::move(web_ui_);
+   }
+ 
+-  bool shared_storage_writable() const { return shared_storage_writable_; }
++  bool shared_storage_writable() const { return false; }
+ 
+   enum ErrorPageProcess {
+     kNotErrorPage,
+@@ -2572,7 +2572,7 @@ class CONTENT_EXPORT NavigationRequest
+   // Whether or not the request is eligible to write to shared storage from
+   // response headers. See
+   // https://github.com/WICG/shared-storage#from-response-headers
+-  bool shared_storage_writable_ = false;
++  // bool shared_storage_writable_ = false;
+ 
+   // A WeakPtr for the BindContext associated with the browser routing loader
+   // factory for the committing document. This will be set in
+diff --git a/content/browser/renderer_host/render_frame_host_impl.cc b/content/browser/renderer_host/render_frame_host_impl.cc
+index 70f2b666d7f..e970bae3523 100644
+--- a/content/browser/renderer_host/render_frame_host_impl.cc
++++ b/content/browser/renderer_host/render_frame_host_impl.cc
+@@ -7830,8 +7830,7 @@ void RenderFrameHostImpl::DidChangeIframeAttributes(
+     return;
+   }
+ 
+-  if (attributes->shared_storage_writable &&
+-      (!base::FeatureList::IsEnabled(blink::features::kSharedStorageAPIM118))) {
++  if (attributes->shared_storage_writable) {
+     bad_message::ReceivedBadMessage(
+         GetProcess(),
+         bad_message::RFH_RECEIVED_INVALID_SHARED_STORAGE_WRITABLE_ATTRIBUTE);
+diff --git a/content/child/runtime_features.cc b/content/child/runtime_features.cc
+index 7645fbcb62a..4123bd0aad1 100644
+--- a/content/child/runtime_features.cc
++++ b/content/child/runtime_features.cc
+@@ -234,12 +234,6 @@ void SetRuntimeFeaturesFromChromiumFeatures() {
+     {wf::EnableFedCmIdpSigninStatus,
+      raw_ref(features::kFedCmIdpSigninStatusEnabled), kSetOnlyIfOverridden},
+     {wf::EnableGamepadMultitouch, raw_ref(features::kEnableGamepadMultitouch)},
+-    {wf::EnableSharedStorageAPI,
+-     raw_ref(features::kPrivacySandboxAdsAPIsOverride), kSetOnlyIfOverridden},
+-    {wf::EnableSharedStorageAPI,
+-     raw_ref(features::kPrivacySandboxAdsAPIsM1Override), kSetOnlyIfOverridden},
+-    {wf::EnableSharedStorageAPIM118,
+-     raw_ref(blink::features::kSharedStorageAPIM118), kSetOnlyIfOverridden},
+     {wf::EnableFedCmMultipleIdentityProviders,
+      raw_ref(features::kFedCmMultipleIdentityProviders), kDefault},
+     {wf::EnableFedCmSelectiveDisclosure,
+@@ -679,26 +673,6 @@ void ResolveInvalidConfigurations() {
+     }
+   }
+ 
+-  if (!base::FeatureList::IsEnabled(blink::features::kSharedStorageAPI)) {
+-    LOG_IF(WARNING, WebRuntimeFeatures::IsSharedStorageAPIEnabled())
+-        << "SharedStorage cannot be enabled in this "
+-           "configuration. Use --"
+-        << switches::kEnableFeatures << "="
+-        << blink::features::kSharedStorageAPI.name << " in addition.";
+-    WebRuntimeFeatures::EnableSharedStorageAPI(false);
+-  }
+-
+-  if (!base::FeatureList::IsEnabled(blink::features::kSharedStorageAPIM118) ||
+-      !base::FeatureList::IsEnabled(blink::features::kSharedStorageAPI)) {
+-    LOG_IF(WARNING, WebRuntimeFeatures::IsSharedStorageAPIM118Enabled())
+-        << "SharedStorage for M118+ cannot be enabled in this "
+-           "configuration. Use --"
+-        << switches::kEnableFeatures << "="
+-        << blink::features::kSharedStorageAPI.name << ","
+-        << blink::features::kSharedStorageAPIM118.name << " in addition.";
+-    WebRuntimeFeatures::EnableSharedStorageAPIM118(false);
+-  }
+-
+   if (!base::FeatureList::IsEnabled(
+           attribution_reporting::features::kConversionMeasurement)) {
+     LOG_IF(WARNING, WebRuntimeFeatures::IsAttributionReportingEnabled())
+diff --git a/content/services/auction_worklet/seller_worklet.cc b/content/services/auction_worklet/seller_worklet.cc
+index db651de6ac6..834d19aa75b 100644
+--- a/content/services/auction_worklet/seller_worklet.cc
++++ b/content/services/auction_worklet/seller_worklet.cc
+@@ -1061,6 +1061,7 @@ void SellerWorklet::V8State::ScoreAd(
+   context_recycler.AddPrivateAggregationBindings(
+       permissions_policy_state_->private_aggregation_allowed);
+ 
++  /*
+   if (base::FeatureList::IsEnabled(blink::features::kSharedStorageAPI)) {
+     context_recycler.AddSharedStorageBindings(
+         shared_storage_host_remote_.is_bound()
+@@ -1068,6 +1069,7 @@ void SellerWorklet::V8State::ScoreAd(
+             : nullptr,
+         permissions_policy_state_->shared_storage_allowed);
+   }
++  */
+ 
+   success =
+       v8_helper_
+diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
+index 193a0d0f18a..6cde92b1e39 100644
+--- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
++++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
+@@ -3390,18 +3390,6 @@
+       status: "test",
+       base_feature: "none",
+     },
+-    {
+-      name: "SharedStorageAPI",
+-      base_feature: "none",
+-      origin_trial_feature_name: "PrivacySandboxAdsAPIs",
+-      origin_trial_allows_third_party: true,
+-      public: true,
+-    },
+-    {
+-      name: "SharedStorageAPIM118",
+-      base_feature: "none",
+-      public: true,
+-    },
+     {
+       name: "SharedWorker",
+       public: true,

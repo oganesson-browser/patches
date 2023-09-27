@@ -1,0 +1,11 @@
+{
+    "feature": {
+        "origin_trial_feature_name": "PrivacySandboxAdsAPIs"
+    }
+    "skip": true,
+    "data": [
+        {
+"rm": "services/network/shared_storage/"
+        }
+    ]
+}

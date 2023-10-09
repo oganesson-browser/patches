@@ -1,6 +1,7 @@
 import { promisify } from 'node:util';
 import { exec } from 'node:child_process';
-const execP = promisify(exec);
+
+export const execP = promisify(exec);
 
 export async function gitClone(remoteURL, localPath)  {
     const { stdout, stderr } = await execP(`git clone ${remoteURL} ${localPath || ''}`);

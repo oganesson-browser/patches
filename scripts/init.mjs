@@ -1,11 +1,11 @@
 
-import { mkdir } from 'node:fs/promises';
-// TODO
-import info from './upstream.json' assert { type: 'json' };
+import { mkdir, readFile } from 'node:fs/promises';
 import { gitClone, execP } from './git.mjs';
 
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+const info = JSON.parse(await readFile('./upstream.json'));
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const upstreamDirname = join(__dirname, '../upstream');

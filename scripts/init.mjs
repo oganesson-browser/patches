@@ -5,10 +5,11 @@ import { gitClone, execP } from './git.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const info = JSON.parse(await readFile('./upstream.json'));
-
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const upstreamDirname = join(__dirname, '../upstream');
+
+const info = JSON.parse(await readFile(join(__dirname, './upstream.json')));
 
 async function cloneDestination({repo, dest}) {
     const dest_ = join(__dirname, '../upstream', dest);
@@ -17,13 +18,25 @@ async function cloneDestination({repo, dest}) {
     return dest_;
 }
 
-async function depotToolsFetch(dir, nohooks = true, nohistory = true) {
-    await execP(`fetch ${nohooks && '--nohooks' || ''} ${nohistory && '--nohistory' || ''} chromium`, {
+async function run(command, dir) {
+    await execP(command, {
         cwd: upstreamDirname,
         env: {
             PATH: `${dir}:${process.env.PATH}`,
         }
     });
+}
+
+async function depotToolsFetch(dir, nohooks = true, nohistory = true) {
+    await run(`fetch ${nohooks && '--nohooks' || ''} ${nohistory && '--nohistory' || ''} chromium`, dir);
+}
+
+async function installDeps(dir) {
+    await run('./build/install-build-deps.sh', dir);
+}
+
+async function gn(dir) {
+    await run('gn gen out/Default', dir);
 }
 
 // OK
@@ -33,6 +46,12 @@ async function depotToolsFetch(dir, nohooks = true, nohistory = true) {
 const dest = await cloneDestination(info.depotTools);
 //const envPath = `${dest}:${process.env.PATH}`;
 
-await depotToolsFetch(dest);
+//OK
+//await depotToolsFetch(dest);
+
+//OK
+//await installDeps()
+
+await gn();
 
 //await gitClone(chromium.repo, chromium.dest);

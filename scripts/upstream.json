@@ -1,0 +1,10 @@
+{
+  "depotTools": {
+    "repo": "https://chromium.googlesource.com/chromium/tools/depot_tools.git",
+    "dest": "depot_tools"
+  },
+  "public_suffix_list": {
+    "repo": "https://github.com/publicsuffix/list.git",
+    "dest": "public_suffix_list"
+  }
+}

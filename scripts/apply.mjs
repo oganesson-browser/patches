@@ -1,12 +1,8 @@
-'use strict';
-
 import { argv } from 'node:process';
 import { readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
-import { exec } from 'node:child_process';
 
-const execP = promisify(exec);
+import { gitApply } from './git.mjs';
 
 const patchesLocation = '../data/';
 const srcLocation = '../../src/';
@@ -19,10 +15,6 @@ function getParams() {
   return {patches, src};
 }
 
-async function gitApply(srcDir, patchPath) {
-  const { stdout, stderr } = await execP(`git apply ${patchPath}`, {cwd: srcDir});
-  console.error('HERE', srcDir, patchPath, stdout, stderr);
-}
 
 async function removeDir(path) {
   console.log('rm here', path);

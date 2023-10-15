@@ -1,8 +1,19 @@
 {
+    "compiles": true,
     "feature": {
         "origin_trial_feature_name": "PrivacySandboxAdsAPIs"
     }
     "skip": true,
+    "remove": [
+        "third_party/blink/renderer/modules/browsing_topics/",
+        "components/privacy_sandbox/canonical_topic.h",
+        "components/privacy_sandbox/canonical_topic.cc",
+        "content/browser/browsing_topics/",
+        "components/browsing_topics/",
+        "chrome/browser/ui/webui/browsing_topics/",
+        "chrome/browser/browsing_topics/",
+        "chrome/browser/resources/browsing_topics/",
+    ],
     "data": [
         {
         }

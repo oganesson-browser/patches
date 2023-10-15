@@ -1,5 +1,6 @@
 {
     "compiles": true,
+    "stable": false,
     "feature": {
         "origin_trial_feature_name": "PrivacySandboxAdsAPIs"
     }

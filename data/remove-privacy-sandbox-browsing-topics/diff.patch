@@ -1,0 +1,1899 @@
+diff --git a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
+index a7463d5e82..6a50ddf3ad 100644
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -265,8 +265,6 @@ static_library("browser") {
+     "browsing_data/navigation_entry_remover.h",
+     "browsing_data/site_data_size_collector.cc",
+     "browsing_data/site_data_size_collector.h",
+-    "browsing_topics/browsing_topics_service_factory.cc",
+-    "browsing_topics/browsing_topics_service_factory.h",
+     "cart/commerce_hint_service.cc",
+     "cart/commerce_hint_service.h",
+     "chained_back_navigation_tracker.cc",
+@@ -2157,8 +2155,6 @@ static_library("browser") {
+     "//components/browser_sync",
+     "//components/browsing_data/content",
+     "//components/browsing_data/core",
+-    "//components/browsing_topics",
+-    "//components/browsing_topics/mojom:mojo_bindings",
+     "//components/captive_portal/content",
+     "//components/captive_portal/core",
+     "//components/captive_portal/core:buildflags",
+diff --git a/chrome/browser/browsing_data/chrome_browsing_data_model_delegate.cc b/chrome/browser/browsing_data/chrome_browsing_data_model_delegate.cc
+index 346c184e3c..46348c2e81 100644
+--- a/chrome/browser/browsing_data/chrome_browsing_data_model_delegate.cc
++++ b/chrome/browser/browsing_data/chrome_browsing_data_model_delegate.cc
+@@ -9,9 +9,13 @@
+ #include "base/functional/callback_helpers.h"
+ #include "base/memory/ref_counted.h"
+ #include "base/memory/scoped_refptr.h"
++/*
+ #include "chrome/browser/browsing_topics/browsing_topics_service_factory.h"
++*/
+ #include "chrome/browser/media/webrtc/media_device_salt_service_factory.h"
++/*
+ #include "components/browsing_topics/browsing_topics_service.h"
++*/
+ #include "components/content_settings/browser/page_specific_content_settings.h"
+ #include "components/media_device_salt/media_device_salt_service.h"
+ #include "content/public/browser/storage_partition.h"
+@@ -125,6 +129,7 @@ void ChromeBrowsingDataModelDelegate::RemoveDataKey(
+   auto dynamic_barrier_closure =
+       base::MakeRefCounted<DynamicBarrierClosure>(std::move(callback));
+ 
++  /*
+   if (storage_types.Has(
+           static_cast<BrowsingDataModel::StorageType>(StorageType::kTopics))) {
+     // Topics can be deleted but not queried from disk as the creating origins
+@@ -134,6 +139,7 @@ void ChromeBrowsingDataModelDelegate::RemoveDataKey(
+         browsing_topics::BrowsingTopicsServiceFactory::GetForProfile(profile_);
+     browsing_topics_service->ClearTopicsDataForOrigin(*origin);
+   }
++  */
+ 
+   if (storage_types.Has(static_cast<BrowsingDataModel::StorageType>(
+           StorageType::kMediaDeviceSalt))) {
+@@ -189,6 +195,7 @@ ChromeBrowsingDataModelDelegate::IsBlockedByThirdPartyCookieBlocking(
+       static_cast<int>(StorageType::kFirstType)) {
+     return absl::nullopt;
+   }
++  // ?
+   switch (
+       static_cast<ChromeBrowsingDataModelDelegate::StorageType>(storage_type)) {
+     case StorageType::kTopics:
+diff --git a/chrome/browser/browsing_data/chrome_browsing_data_remover_delegate.cc b/chrome/browser/browsing_data/chrome_browsing_data_remover_delegate.cc
+index 8b9a88073c..2264e5a29b 100644
+--- a/chrome/browser/browsing_data/chrome_browsing_data_remover_delegate.cc
++++ b/chrome/browser/browsing_data/chrome_browsing_data_remover_delegate.cc
+@@ -720,7 +720,9 @@ void ChromeBrowsingDataRemoverDelegate::RemoveEmbedderData(
+             PrivacySandboxSettingsFactory::GetForProfile(profile_)) {
+       privacy_sandbox_settings->ClearFledgeJoiningAllowedSettings(delete_begin_,
+                                                                   delete_end_);
++      /*
+       privacy_sandbox_settings->ClearTopicSettings(delete_begin_, delete_end_);
++      */
+     }
+ 
+     // Cleared for both DATA_TYPE_HISTORY and DATA_TYPE_CONTENT_SETTINGS.
+diff --git a/chrome/browser/chrome_browser_interface_binders.cc b/chrome/browser/chrome_browser_interface_binders.cc
+index 0196e840cc..7b84621f50 100644
+--- a/chrome/browser/chrome_browser_interface_binders.cc
++++ b/chrome/browser/chrome_browser_interface_binders.cc
+@@ -39,7 +39,9 @@
+ #include "chrome/browser/ui/side_panel/companion/companion_utils.h"
+ #include "chrome/browser/ui/ui_features.h"
+ #include "chrome/browser/ui/web_applications/draggable_region_host_impl.h"
++/*
+ #include "chrome/browser/ui/webui/browsing_topics/browsing_topics_internals_ui.h"
++*/
+ #include "chrome/browser/ui/webui/engagement/site_engagement_ui.h"
+ #include "chrome/browser/ui/webui/internals/internals_ui.h"
+ #include "chrome/browser/ui/webui/location_internals/location_internals.mojom.h"
+@@ -58,7 +60,9 @@
+ #include "chrome/common/pref_names.h"
+ #include "chrome/common/webui_url_constants.h"
+ #include "chrome/services/speech/buildflags/buildflags.h"
++/*
+ #include "components/browsing_topics/mojom/browsing_topics_internals.mojom.h"
++*/
+ #include "components/commerce/content/browser/commerce_internals_ui.h"
+ #include "components/commerce/core/internals/mojom/commerce_internals.mojom.h"
+ #include "components/compose/buildflags.h"
+@@ -1052,8 +1056,10 @@ void PopulateChromeWebUIFrameBinders(
+       media::mojom::MediaEngagementScoreDetailsProvider, MediaEngagementUI>(
+       map);
+ 
++  /*
+   RegisterWebUIControllerInterfaceBinder<browsing_topics::mojom::PageHandler,
+                                          BrowsingTopicsInternalsUI>(map);
++  */
+ 
+   RegisterWebUIControllerInterfaceBinder<
+       media_history::mojom::MediaHistoryStore, MediaHistoryUI>(map);
+diff --git a/chrome/browser/chrome_content_browser_client.cc b/chrome/browser/chrome_content_browser_client.cc
+index 225cb36d97..d6a130d958 100644
+--- a/chrome/browser/chrome_content_browser_client.cc
++++ b/chrome/browser/chrome_content_browser_client.cc
+@@ -52,7 +52,9 @@
+ #include "chrome/browser/browser_features.h"
+ #include "chrome/browser/browser_process.h"
+ #include "chrome/browser/browsing_data/chrome_browsing_data_model_delegate.h"
++/*
+ #include "chrome/browser/browsing_topics/browsing_topics_service_factory.h"
++*/
+ #include "chrome/browser/captive_portal/captive_portal_service_factory.h"
+ #include "chrome/browser/child_process_host_flags.h"
+ #include "chrome/browser/chrome_browser_main_extra_parts_nacl_deprecation.h"
+@@ -204,7 +206,9 @@
+ #include "chrome/installer/util/google_update_settings.h"
+ #include "components/autofill/core/common/autofill_switches.h"
+ #include "components/blocked_content/popup_blocker.h"
++/*
+ #include "components/browsing_topics/browsing_topics_service.h"
++*/
+ #include "components/captive_portal/core/buildflags.h"
+ #include "components/content_settings/browser/page_specific_content_settings.h"
+ #include "components/content_settings/core/browser/cookie_settings.h"
+@@ -361,7 +365,9 @@
+ #include "third_party/blink/public/common/permissions/permission_utils.h"
+ #include "third_party/blink/public/common/permissions_policy/permissions_policy.h"
+ #include "third_party/blink/public/common/switches.h"
++/*
+ #include "third_party/blink/public/mojom/browsing_topics/browsing_topics.mojom.h"
++*/
+ #include "third_party/blink/public/public_buildflags.h"
+ #include "third_party/widevine/cdm/buildflags.h"
+ #include "ui/base/clipboard/clipboard_format_type.h"
+@@ -7342,6 +7348,7 @@ void ChromeContentBrowserClient::AugmentNavigationDownloadPolicy(
+   }
+ }
+ 
++/*
+ bool ChromeContentBrowserClient::HandleTopicsWebApi(
+     const url::Origin& context_origin,
+     content::RenderFrameHost* main_frame,
+@@ -7382,6 +7389,7 @@ int ChromeContentBrowserClient::NumVersionsInTopicsEpochs(
+   return browsing_topics_service->NumVersionsInEpochs(
+       main_frame->GetLastCommittedOrigin());
+ }
++*/
+ 
+ bool ChromeContentBrowserClient::IsBluetoothScanningBlocked(
+     content::BrowserContext* browser_context,
+diff --git a/chrome/browser/chrome_content_browser_client.h b/chrome/browser/chrome_content_browser_client.h
+index ee3df818d9..4513b7dc22 100644
+--- a/chrome/browser/chrome_content_browser_client.h
++++ b/chrome/browser/chrome_content_browser_client.h
+@@ -777,6 +777,7 @@ class ChromeContentBrowserClient : public content::ContentBrowserClient {
+       bool user_gesture,
+       blink::NavigationDownloadPolicy* download_policy) override;
+ 
++  /*
+   bool HandleTopicsWebApi(
+       const url::Origin& context_origin,
+       content::RenderFrameHost* main_frame,
+@@ -787,6 +788,7 @@ class ChromeContentBrowserClient : public content::ContentBrowserClient {
+ 
+   int NumVersionsInTopicsEpochs(
+       content::RenderFrameHost* main_frame) const override;
++  */
+ 
+   bool IsBluetoothScanningBlocked(content::BrowserContext* browser_context,
+                                   const url::Origin& requesting_origin,
+diff --git a/chrome/browser/privacy_sandbox/privacy_sandbox_service.h b/chrome/browser/privacy_sandbox/privacy_sandbox_service.h
+index 22af958cf7..036388cee3 100644
+--- a/chrome/browser/privacy_sandbox/privacy_sandbox_service.h
++++ b/chrome/browser/privacy_sandbox/privacy_sandbox_service.h
+@@ -13,7 +13,9 @@
+ #include "components/content_settings/core/browser/host_content_settings_map.h"
+ #include "components/keyed_service/core/keyed_service.h"
+ #include "components/prefs/pref_change_registrar.h"
++/*
+ #include "components/privacy_sandbox/canonical_topic.h"
++*/
+ #include "components/privacy_sandbox/privacy_sandbox_prefs.h"
+ #include "components/privacy_sandbox/privacy_sandbox_settings.h"
+ #include "components/profile_metrics/browser_profile_type.h"
+@@ -251,6 +253,7 @@ class PrivacySandboxService : public KeyedService {
+ 
+   // Returns the top topics for the previous N epochs.
+   // Virtual for mocking in tests.
++  /*
+   virtual std::vector<privacy_sandbox::CanonicalTopic> GetCurrentTopTopics()
+       const = 0;
+ 
+@@ -288,6 +291,7 @@ class PrivacySandboxService : public KeyedService {
+   TopicsConsentLastUpdateSource() const = 0;
+   virtual base::Time TopicsConsentLastUpdateTime() const = 0;
+   virtual std::string TopicsConsentLastUpdateText() const = 0;
++  */
+ };
+ 
+ #endif  // CHROME_BROWSER_PRIVACY_SANDBOX_PRIVACY_SANDBOX_SERVICE_H_
+diff --git a/chrome/browser/privacy_sandbox/privacy_sandbox_service_factory.cc b/chrome/browser/privacy_sandbox/privacy_sandbox_service_factory.cc
+index 1b17c22d96..07097a96c9 100644
+--- a/chrome/browser/privacy_sandbox/privacy_sandbox_service_factory.cc
++++ b/chrome/browser/privacy_sandbox/privacy_sandbox_service_factory.cc
+@@ -5,7 +5,9 @@
+ #include "chrome/browser/privacy_sandbox/privacy_sandbox_service_factory.h"
+ 
+ #include "base/no_destructor.h"
++/*
+ #include "chrome/browser/browsing_topics/browsing_topics_service_factory.h"
++*/
+ #include "chrome/browser/content_settings/cookie_settings_factory.h"
+ #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
+ #include "chrome/browser/first_party_sets/first_party_sets_policy_service_factory.h"
+@@ -71,7 +73,9 @@ PrivacySandboxServiceFactory::PrivacySandboxServiceFactory()
+   DependsOn(PrivacySandboxSettingsFactory::GetInstance());
+   DependsOn(CookieSettingsFactory::GetInstance());
+   DependsOn(HostContentSettingsMapFactory::GetInstance());
++  /*
+   DependsOn(browsing_topics::BrowsingTopicsServiceFactory::GetInstance());
++  */
+ #if !BUILDFLAG(IS_ANDROID)
+   DependsOn(TrustSafetySentimentServiceFactory::GetInstance());
+ #endif
+@@ -100,7 +104,9 @@ PrivacySandboxServiceFactory::BuildServiceInstanceForBrowserContext(
+ #if !BUILDFLAG(IS_ANDROID)
+       TrustSafetySentimentServiceFactory::GetForProfile(profile),
+ #endif
++      /*
+       browsing_topics::BrowsingTopicsServiceFactory::GetForProfile(profile),
++      */
+       first_party_sets::FirstPartySetsPolicyServiceFactory::
+           GetForBrowserContext(context));
+ }
+diff --git a/chrome/browser/privacy_sandbox/privacy_sandbox_service_impl.cc b/chrome/browser/privacy_sandbox/privacy_sandbox_service_impl.cc
+index 383dc6478b..4b3d2f201e 100644
+--- a/chrome/browser/privacy_sandbox/privacy_sandbox_service_impl.cc
++++ b/chrome/browser/privacy_sandbox/privacy_sandbox_service_impl.cc
+@@ -20,7 +20,9 @@
+ #include "base/types/optional_util.h"
+ #include "build/branding_buildflags.h"
+ #include "chrome/common/webui_url_constants.h"
++/*
+ #include "components/browsing_topics/browsing_topics_service.h"
++*/
+ #include "components/content_settings/core/browser/cookie_settings.h"
+ #include "components/content_settings/core/common/content_settings.h"
+ #include "components/content_settings/core/common/content_settings_types.h"
+@@ -55,7 +57,9 @@
+ 
+ namespace {
+ 
++/*
+ constexpr char kBlockedTopicsTopicKey[] = "topic";
++*/
+ 
+ bool g_prompt_disabled_for_tests = false;
+ 
+@@ -69,6 +73,7 @@ bool AreThirdPartyCookiesBlocked(
+          default_content_setting == ContentSetting::CONTENT_SETTING_BLOCK;
+ }
+ 
++/*
+ // Sorts |topics| alphabetically by topic display name for display.
+ // In addition, removes duplicate topics.
+ void SortAndDeduplicateTopicsForDisplay(
+@@ -81,6 +86,7 @@ void SortAndDeduplicateTopicsForDisplay(
+             });
+   topics.erase(std::unique(topics.begin(), topics.end()), topics.end());
+ }
++*/
+ 
+ // Returns whether |profile_type|, and the current browser session on CrOS,
+ // represent a regular (e.g. non guest, non system, non kiosk) profile.
+@@ -99,6 +105,7 @@ bool IsRegularProfile(profile_metrics::BrowserProfileType profile_type) {
+ #endif
+ }
+ 
++/*
+ // Returns the text contents of the Topics Consent dialog.
+ std::string GetTopicsConfirmationText() {
+   std::vector<int> string_ids = {
+@@ -180,8 +187,10 @@ std::string GetTopicsSettingsText(bool did_consent,
+                                   next_string;
+                          });
+ }
++*/
+ 
+ // Returns whether this is a Google Chrome-branded build.
++//?
+ bool IsChromeBuild() {
+ #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
+   return true;
+@@ -240,7 +249,9 @@ PrivacySandboxServiceImpl::PrivacySandboxServiceImpl(
+ #if !BUILDFLAG(IS_ANDROID)
+     TrustSafetySentimentService* sentiment_service,
+ #endif
++    /*
+     browsing_topics::BrowsingTopicsService* browsing_topics_service,
++    */
+     first_party_sets::FirstPartySetsPolicyService* first_party_sets_service)
+     : privacy_sandbox_settings_(privacy_sandbox_settings),
+       cookie_settings_(cookie_settings),
+@@ -252,7 +263,9 @@ PrivacySandboxServiceImpl::PrivacySandboxServiceImpl(
+ #if !BUILDFLAG(IS_ANDROID)
+       sentiment_service_(sentiment_service),
+ #endif
++      /*
+       browsing_topics_service_(browsing_topics_service),
++      */
+       first_party_sets_policy_service_(first_party_sets_service) {
+   DCHECK(privacy_sandbox_settings_);
+   DCHECK(pref_service_);
+@@ -266,10 +279,13 @@ PrivacySandboxServiceImpl::PrivacySandboxServiceImpl(
+           &PrivacySandboxServiceImpl::OnPrivacySandboxV2PrefChanged,
+           base::Unretained(this)));
+ 
++  /*
+   user_prefs_registrar_.Add(
+       prefs::kPrivacySandboxM1TopicsEnabled,
+       base::BindRepeating(&PrivacySandboxServiceImpl::OnTopicsPrefChanged,
+                           base::Unretained(this)));
++  */
++  // ?
+   user_prefs_registrar_.Add(
+       prefs::kPrivacySandboxM1FledgeEnabled,
+       base::BindRepeating(&PrivacySandboxServiceImpl::OnFledgePrefChanged,
+@@ -289,7 +305,10 @@ PrivacySandboxServiceImpl::PrivacySandboxServiceImpl(
+ 
+     // Disable M1 prefs. Measurement pref should not be reset when restricted
+     // notice feature is enabled.
++    /*
+     pref_service_->SetBoolean(prefs::kPrivacySandboxM1TopicsEnabled, false);
++    */
++    // ?
+     pref_service_->SetBoolean(prefs::kPrivacySandboxM1FledgeEnabled, false);
+     if (!privacy_sandbox::kPrivacySandboxSettings4RestrictedNotice.Get()) {
+       pref_service_->SetBoolean(prefs::kPrivacySandboxM1AdMeasurementEnabled,
+@@ -368,6 +387,7 @@ void PrivacySandboxServiceImpl::PromptActionOccurred(PromptAction action) {
+   }
+ }
+ 
++// ?
+ void PrivacySandboxServiceImpl::PromptActionOccurredM1(PromptAction action) {
+   DCHECK(
+       base::FeatureList::IsEnabled(privacy_sandbox::kPrivacySandboxSettings4));
+@@ -391,7 +411,10 @@ void PrivacySandboxServiceImpl::PromptActionOccurredM1(PromptAction action) {
+       DCHECK(privacy_sandbox::kPrivacySandboxSettings4NoticeRequired.Get());
+       pref_service_->SetBoolean(prefs::kPrivacySandboxM1RowNoticeAcknowledged,
+                                 true);
++      /*
+       pref_service_->SetBoolean(prefs::kPrivacySandboxM1TopicsEnabled, true);
++      */
++      // ?
+       pref_service_->SetBoolean(prefs::kPrivacySandboxM1FledgeEnabled, true);
+       pref_service_->SetBoolean(prefs::kPrivacySandboxM1AdMeasurementEnabled,
+                                 true);
+@@ -403,16 +426,20 @@ void PrivacySandboxServiceImpl::PromptActionOccurredM1(PromptAction action) {
+     DCHECK(privacy_sandbox::kPrivacySandboxSettings4ConsentRequired.Get());
+     pref_service_->SetBoolean(prefs::kPrivacySandboxM1ConsentDecisionMade,
+                               true);
++    /*
+     pref_service_->SetBoolean(prefs::kPrivacySandboxM1TopicsEnabled, true);
+     RecordUpdatedTopicsConsent(
+         privacy_sandbox::TopicsConsentUpdateSource::kConfirmation, true);
++    */
+   } else if (PromptAction::kConsentDeclined == action) {
+     DCHECK(privacy_sandbox::kPrivacySandboxSettings4ConsentRequired.Get());
+     pref_service_->SetBoolean(prefs::kPrivacySandboxM1ConsentDecisionMade,
+                               true);
++    /*
+     pref_service_->SetBoolean(prefs::kPrivacySandboxM1TopicsEnabled, false);
+     RecordUpdatedTopicsConsent(
+         privacy_sandbox::TopicsConsentUpdateSource::kConfirmation, false);
++   */
+   } else if (PromptAction::kRestrictedNoticeAcknowledge == action ||
+              PromptAction::kRestrictedNoticeOpenSettings == action) {
+     CHECK(privacy_sandbox::kPrivacySandboxSettings4RestrictedNotice.Get());
+@@ -480,9 +507,11 @@ void PrivacySandboxServiceImpl::OnPrivacySandboxV2PrefChanged() {
+         content::BrowsingDataRemover::ORIGIN_TYPE_UNPROTECTED_WEB);
+   }
+ 
++  /*
+   if (browsing_topics_service_) {
+     browsing_topics_service_->ClearAllTopicsData();
+   }
++  */
+ }
+ 
+ bool PrivacySandboxServiceImpl::IsRestrictedNoticeEnabled() {
+@@ -1038,6 +1067,7 @@ void PrivacySandboxServiceImpl::ConvertInterestGroupDataKeysForDisplay(
+       std::vector<std::string>{display_entries.begin(), display_entries.end()});
+ }
+ 
++/*
+ std::vector<privacy_sandbox::CanonicalTopic>
+ PrivacySandboxServiceImpl::GetCurrentTopTopics() const {
+   if (privacy_sandbox::kPrivacySandboxSettings3ShowSampleDataForTesting.Get() ||
+@@ -1131,6 +1161,7 @@ std::string PrivacySandboxServiceImpl::TopicsConsentLastUpdateText() const {
+   return pref_service_->GetString(
+       prefs::kPrivacySandboxTopicsConsentTextAtLastUpdate);
+ }
++*/
+ 
+ // static
+ PrivacySandboxService::PromptType
+@@ -1475,7 +1506,10 @@ PrivacySandboxServiceImpl::GetRequiredPromptTypeInternalM1(
+       // required.
+       if (pref_service->GetBoolean(
+               prefs::kPrivacySandboxM1RowNoticeAcknowledged) &&
++          true) {
++          /*
+           !pref_service->GetBoolean(prefs::kPrivacySandboxM1TopicsEnabled)) {
++          */
+         pref_service->SetInteger(
+             prefs::kPrivacySandboxM1PromptSuppressed,
+             static_cast<int>(
+@@ -1561,6 +1595,7 @@ void PrivacySandboxServiceImpl::MaybeInitializeAntiAbuseContentSetting() {
+   pref_service_->SetBoolean(prefs::kPrivacySandboxAntiAbuseInitialized, true);
+ }
+ 
++/*
+ void PrivacySandboxServiceImpl::RecordUpdatedTopicsConsent(
+     privacy_sandbox::TopicsConsentUpdateSource source,
+     bool did_consent) const {
+@@ -1594,6 +1629,7 @@ void PrivacySandboxServiceImpl::RecordUpdatedTopicsConsent(
+   pref_service_->SetString(prefs::kPrivacySandboxTopicsConsentTextAtLastUpdate,
+                            consent_text);
+ }
++*/
+ 
+ #if !BUILDFLAG(IS_ANDROID)
+ void PrivacySandboxServiceImpl::MaybeCloseOpenPrompts() {
+@@ -1796,6 +1832,7 @@ void PrivacySandboxServiceImpl::RecordPromptActionMetrics(PromptAction action) {
+   }
+ }
+ 
++/*
+ void PrivacySandboxServiceImpl::OnTopicsPrefChanged() {
+   // If the user has disabled the preference, any related data stored should be
+   // cleared.
+@@ -1807,7 +1844,9 @@ void PrivacySandboxServiceImpl::OnTopicsPrefChanged() {
+     browsing_topics_service_->ClearAllTopicsData();
+   }
+ }
++*/
+ 
++// ?
+ void PrivacySandboxServiceImpl::OnFledgePrefChanged() {
+   // If the user has disabled the preference, any related data stored should be
+   // cleared.
+diff --git a/chrome/browser/privacy_sandbox/privacy_sandbox_service_impl.h b/chrome/browser/privacy_sandbox/privacy_sandbox_service_impl.h
+index 876d0558f2..5dd33cff69 100644
+--- a/chrome/browser/privacy_sandbox/privacy_sandbox_service_impl.h
++++ b/chrome/browser/privacy_sandbox/privacy_sandbox_service_impl.h
+@@ -14,7 +14,9 @@
+ #include "chrome/browser/first_party_sets/first_party_sets_policy_service.h"
+ #include "components/content_settings/core/browser/host_content_settings_map.h"
+ #include "components/prefs/pref_change_registrar.h"
++/*
+ #include "components/privacy_sandbox/canonical_topic.h"
++*/
+ #include "components/privacy_sandbox/privacy_sandbox_prefs.h"
+ #include "components/privacy_sandbox/privacy_sandbox_settings.h"
+ #include "components/profile_metrics/browser_profile_type.h"
+@@ -35,9 +37,11 @@ namespace content_settings {
+ class CookieSettings;
+ }
+ 
++/*
+ namespace browsing_topics {
+ class BrowsingTopicsService;
+ }
++*/
+ 
+ namespace views {
+ class Widget;
+@@ -56,7 +60,9 @@ class PrivacySandboxServiceImpl : public PrivacySandboxService {
+ #if !BUILDFLAG(IS_ANDROID)
+       TrustSafetySentimentService* sentiment_service,
+ #endif
++      /*
+       browsing_topics::BrowsingTopicsService* browsing_topics_service,
++      */
+       first_party_sets::FirstPartySetsPolicyService* first_party_sets_service);
+ 
+   ~PrivacySandboxServiceImpl() override;
+@@ -93,6 +99,7 @@ class PrivacySandboxServiceImpl : public PrivacySandboxService {
+       const override;
+   void SetFledgeJoiningAllowed(const std::string& top_frame_etld_plus1,
+                                bool allowed) const override;
++  /*
+   std::vector<privacy_sandbox::CanonicalTopic> GetCurrentTopTopics()
+       const override;
+   std::vector<privacy_sandbox::CanonicalTopic> GetBlockedTopics()
+@@ -106,6 +113,7 @@ class PrivacySandboxServiceImpl : public PrivacySandboxService {
+       const override;
+   base::Time TopicsConsentLastUpdateTime() const override;
+   std::string TopicsConsentLastUpdateText() const override;
++  */
+ 
+  protected:
+   friend class PrivacySandboxServiceTest;
+@@ -336,10 +344,12 @@ class PrivacySandboxServiceImpl : public PrivacySandboxService {
+   // cookie settings.
+   void MaybeInitializeAntiAbuseContentSetting();
+ 
++  /*
+   // Updates the preferences which store the current Topics consent information.
+   void RecordUpdatedTopicsConsent(
+       privacy_sandbox::TopicsConsentUpdateSource source,
+       bool did_consent) const;
++  */
+ 
+ #if !BUILDFLAG(IS_ANDROID)
+   // If appropriate based on feature state, closes all currently open Privacy
+@@ -359,7 +369,9 @@ class PrivacySandboxServiceImpl : public PrivacySandboxService {
+ #if !BUILDFLAG(IS_ANDROID)
+   raw_ptr<TrustSafetySentimentService, DanglingUntriaged> sentiment_service_;
+ #endif
++  /*
+   raw_ptr<browsing_topics::BrowsingTopicsService> browsing_topics_service_;
++  */
+   raw_ptr<first_party_sets::FirstPartySetsPolicyService>
+       first_party_sets_policy_service_;
+ 
+@@ -371,6 +383,7 @@ class PrivacySandboxServiceImpl : public PrivacySandboxService {
+   std::map<Browser*, views::Widget*> browsers_to_open_prompts_;
+ #endif
+ 
++  /*
+   // Fake implementation for current and blocked topics.
+   static constexpr int kFakeTaxonomyVersion = 1;
+   std::set<privacy_sandbox::CanonicalTopic> fake_current_topics_ = {
+@@ -379,6 +392,7 @@ class PrivacySandboxServiceImpl : public PrivacySandboxService {
+   std::set<privacy_sandbox::CanonicalTopic> fake_blocked_topics_ = {
+       {browsing_topics::Topic(3), kFakeTaxonomyVersion},
+       {browsing_topics::Topic(4), kFakeTaxonomyVersion}};
++  */
+ 
+   // Informs the TrustSafetySentimentService, if it exists, that a
+   // Privacy Sandbox 3 interaction for an area has occurred The area is
+@@ -396,8 +410,10 @@ class PrivacySandboxServiceImpl : public PrivacySandboxService {
+   // Record user action metrics based on the |action|.
+   void RecordPromptActionMetrics(PrivacySandboxService::PromptAction action);
+ 
++  /*
+   // Called when the Topics preference is changed.
+   void OnTopicsPrefChanged();
++  */
+ 
+   // Called when the Fledge preference is changed.
+   void OnFledgePrefChanged();
+diff --git a/chrome/browser/privacy_sandbox/privacy_sandbox_settings_delegate.cc b/chrome/browser/privacy_sandbox/privacy_sandbox_settings_delegate.cc
+index 8ee9803ff1..81ecc327cf 100644
+--- a/chrome/browser/privacy_sandbox/privacy_sandbox_settings_delegate.cc
++++ b/chrome/browser/privacy_sandbox/privacy_sandbox_settings_delegate.cc
+@@ -133,6 +133,7 @@ bool PrivacySandboxSettingsDelegate::IsIncognitoProfile() const {
+   return profile_->IsIncognitoProfile();
+ }
+ 
++/*
+ bool PrivacySandboxSettingsDelegate::HasAppropriateTopicsConsent() const {
+   // If the profile doesn't require a release 4 consent, then it always has
+   // an appropriate (i.e. not required) Topics consent.
+@@ -147,6 +148,7 @@ bool PrivacySandboxSettingsDelegate::HasAppropriateTopicsConsent() const {
+   return profile_->GetPrefs()->GetBoolean(
+       prefs::kPrivacySandboxTopicsConsentGiven);
+ }
++*/
+ 
+ bool PrivacySandboxSettingsDelegate::PrivacySandboxRestrictedNoticeRequired()
+     const {
+diff --git a/chrome/browser/privacy_sandbox/privacy_sandbox_settings_delegate.h b/chrome/browser/privacy_sandbox/privacy_sandbox_settings_delegate.h
+index dd56dc07cc..ba111abdb8 100644
+--- a/chrome/browser/privacy_sandbox/privacy_sandbox_settings_delegate.h
++++ b/chrome/browser/privacy_sandbox/privacy_sandbox_settings_delegate.h
+@@ -35,7 +35,9 @@ class PrivacySandboxSettingsDelegate
+   bool IsPrivacySandboxRestricted() const override;
+   bool IsPrivacySandboxCurrentlyUnrestricted() const override;
+   bool IsIncognitoProfile() const override;
++  /*
+   bool HasAppropriateTopicsConsent() const override;
++  */
+   bool IsSubjectToM1NoticeRestricted() const override;
+   bool IsCookieDeprecationExperimentEligible() const override;
+   bool IsCookieDeprecationExperimentCurrentlyEligible() const override;
+diff --git a/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc b/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
+index f8b2aae47b..051973d56d 100644
+--- a/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
++++ b/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
+@@ -34,7 +34,9 @@
+ #include "chrome/browser/browsing_data/browsing_data_history_observer_service.h"
+ #include "chrome/browser/browsing_data/chrome_browsing_data_lifetime_manager_factory.h"
+ #include "chrome/browser/browsing_data/chrome_browsing_data_remover_delegate_factory.h"
++/*
+ #include "chrome/browser/browsing_topics/browsing_topics_service_factory.h"
++*/
+ #include "chrome/browser/chrome_browser_main.h"
+ #include "chrome/browser/client_hints/client_hints_factory.h"
+ #include "chrome/browser/commerce/shopping_service_factory.h"
+@@ -613,7 +615,9 @@ void ChromeBrowserMainExtraPartsProfiles::
+   browser_switcher::BrowserSwitcherServiceFactory::GetInstance();
+ #endif
+   browser_sync::UserEventServiceFactory::GetInstance();
++  /*
+   browsing_topics::BrowsingTopicsServiceFactory::GetInstance();
++  */
+   BrowsingDataHistoryObserverService::Factory::GetInstance();
+ #if defined(TOOLKIT_VIEWS)
+   BubbleContentsWrapperServiceFactory::GetInstance();
+diff --git a/chrome/browser/resources/BUILD.gn b/chrome/browser/resources/BUILD.gn
+index b7f3bdf8b0..52757e7d3b 100644
+--- a/chrome/browser/resources/BUILD.gn
++++ b/chrome/browser/resources/BUILD.gn
+@@ -224,7 +224,6 @@ group("dev_ui_resources") {
+   public_deps = [
+     "accessibility:resources",
+     "bluetooth_internals:resources",
+-    "browsing_topics:resources",
+     "components:resources",
+     "engagement:resources",
+     "internals:resources",
+@@ -279,7 +278,6 @@ repack("dev_ui_paks") {
+   sources = [
+     "$root_gen_dir/chrome/accessibility_resources.pak",
+     "$root_gen_dir/chrome/bluetooth_internals_resources.pak",
+-    "$root_gen_dir/chrome/browsing_topics_internals_resources.pak",
+     "$root_gen_dir/chrome/components_resources.pak",
+     "$root_gen_dir/chrome/dev_ui_browser_resources.pak",
+     "$root_gen_dir/chrome/engagement_resources.pak",
+diff --git a/chrome/browser/ui/BUILD.gn b/chrome/browser/ui/BUILD.gn
+index 23a2fa2edc..bbe1e942e5 100644
+--- a/chrome/browser/ui/BUILD.gn
++++ b/chrome/browser/ui/BUILD.gn
+@@ -239,10 +239,6 @@ static_library("ui") {
+     "webui/autofill_and_password_manager_internals/internals_ui_handler.h",
+     "webui/autofill_and_password_manager_internals/password_manager_internals_ui.cc",
+     "webui/autofill_and_password_manager_internals/password_manager_internals_ui.h",
+-    "webui/browsing_topics/browsing_topics_internals_page_handler.cc",
+-    "webui/browsing_topics/browsing_topics_internals_page_handler.h",
+-    "webui/browsing_topics/browsing_topics_internals_ui.cc",
+-    "webui/browsing_topics/browsing_topics_internals_ui.h",
+     "webui/chrome_web_ui_controller_factory.cc",
+     "webui/chrome_web_ui_controller_factory.h",
+     "webui/components/components_handler.cc",
+@@ -463,8 +459,6 @@ static_library("ui") {
+     "//components/browser_sync",
+     "//components/browsing_data/content",
+     "//components/browsing_data/core",
+-    "//components/browsing_topics",
+-    "//components/browsing_topics/mojom:mojo_bindings",
+     "//components/captive_portal/content",
+     "//components/captive_portal/core:buildflags",
+     "//components/client_hints/browser",
+diff --git a/chrome/browser/ui/views/page_info/page_info_ad_personalization_content_view.cc b/chrome/browser/ui/views/page_info/page_info_ad_personalization_content_view.cc
+index 5c54d7161f..2b11f0db84 100644
+--- a/chrome/browser/ui/views/page_info/page_info_ad_personalization_content_view.cc
++++ b/chrome/browser/ui/views/page_info/page_info_ad_personalization_content_view.cc
+@@ -79,12 +79,15 @@ void PageInfoAdPersonalizationContentView::SetAdPersonalizationInfo(
+   DCHECK(!info.is_empty());
+ 
+   int message_id;
++  /*
+   if (info.has_joined_user_to_interest_group && !info.accessed_topics.empty()) {
+     message_id =
+         base::FeatureList::IsEnabled(privacy_sandbox::kPrivacySandboxSettings4)
+             ? IDS_PAGE_INFO_AD_PRIVACY_TOPICS_AND_FLEDGE_DESCRIPTION
+             : IDS_PAGE_INFO_AD_PERSONALIZATION_TOPICS_AND_INTEREST_GROUP_DESCRIPTION;
+   } else if (info.has_joined_user_to_interest_group) {
++  */
++  if (info.has_joined_user_to_interest_group) {
+     message_id =
+         base::FeatureList::IsEnabled(privacy_sandbox::kPrivacySandboxSettings4)
+             ? IDS_PAGE_INFO_AD_PRIVACY_FLEDGE_DESCRIPTION
+@@ -106,6 +109,7 @@ void PageInfoAdPersonalizationContentView::SetAdPersonalizationInfo(
+   // being cut off.
+   description_label->SetProperty(views::kMarginsKey, gfx::Insets::VH(0, 1));
+ 
++  /*
+   if (!info.accessed_topics.empty()) {
+     std::vector<std::u16string> topic_names;
+     for (const auto& topic : info.accessed_topics) {
+@@ -116,6 +120,7 @@ void PageInfoAdPersonalizationContentView::SetAdPersonalizationInfo(
+       topic_label->SetHorizontalAlignment(gfx::ALIGN_LEFT);
+     }
+   }
++  */
+ 
+   PreferredSizeChanged();
+ }
+diff --git a/chrome/browser/ui/webui/chrome_web_ui_controller_factory.cc b/chrome/browser/ui/webui/chrome_web_ui_controller_factory.cc
+index 122a3d93dc..605e20b280 100644
+--- a/chrome/browser/ui/webui/chrome_web_ui_controller_factory.cc
++++ b/chrome/browser/ui/webui/chrome_web_ui_controller_factory.cc
+@@ -34,7 +34,9 @@
+ #include "chrome/browser/ui/webui/about_ui.h"
+ #include "chrome/browser/ui/webui/autofill_and_password_manager_internals/autofill_internals_ui.h"
+ #include "chrome/browser/ui/webui/autofill_and_password_manager_internals/password_manager_internals_ui.h"
++/*
+ #include "chrome/browser/ui/webui/browsing_topics/browsing_topics_internals_ui.h"
++*/
+ #include "chrome/browser/ui/webui/components/components_ui.h"
+ #include "chrome/browser/ui/webui/constrained_web_dialog_ui.h"
+ #include "chrome/browser/ui/webui/crashes_ui.h"
+@@ -454,8 +456,10 @@ WebUIFactoryFunction GetWebUIFactoryFunction(WebUI* web_ui,
+     return &NewWebUI<BluetoothInternalsUI>;
+ #endif  // !BUILDFLAG(IS_CHROMEOS_LACROS)
+ 
++  /*
+   if (url.host_piece() == chrome::kChromeUIBrowsingTopicsInternalsHost)
+     return &NewWebUI<BrowsingTopicsInternalsUI>;
++  */
+   if (url.host_piece() == chrome::kChromeUIComponentsHost)
+     return &NewWebUI<ComponentsUI>;
+ #if !BUILDFLAG(IS_ANDROID)
+diff --git a/chrome/browser/ui/webui/settings/privacy_sandbox_handler.cc b/chrome/browser/ui/webui/settings/privacy_sandbox_handler.cc
+index 449ca9817c..046bc4f9ac 100644
+--- a/chrome/browser/ui/webui/settings/privacy_sandbox_handler.cc
++++ b/chrome/browser/ui/webui/settings/privacy_sandbox_handler.cc
+@@ -16,6 +16,7 @@ namespace {
+ constexpr char kJoiningSites[] = "joiningSites";
+ constexpr char kBlockedSites[] = "blockedSites";
+ 
++/*
+ // Keys of the dictionary of the CanonicalTopic JS type.
+ constexpr char kTopicId[] = "topicId";
+ constexpr char kTaxonomyVersion[] = "taxonomyVersion";
+@@ -33,6 +34,7 @@ base::Value::Dict ConvertTopicToValue(
+   topic_value.Set(kDisplayString, topic.GetLocalizedRepresentation());
+   return topic_value;
+ }
++*/
+ 
+ }  // namespace
+ 
+@@ -48,6 +50,7 @@ void PrivacySandboxHandler::RegisterMessages() {
+       "getFledgeState",
+       base::BindRepeating(&PrivacySandboxHandler::HandleGetFledgeState,
+                           base::Unretained(this)));
++  /*
+   web_ui()->RegisterMessageCallback(
+       "setTopicAllowed",
+       base::BindRepeating(&PrivacySandboxHandler::HandleSetTopicAllowed,
+@@ -60,6 +63,7 @@ void PrivacySandboxHandler::RegisterMessages() {
+       "topicsToggleChanged",
+       base::BindRepeating(&PrivacySandboxHandler::HandleTopicsToggleChanged,
+                           base::Unretained(this)));
++  */
+ }
+ 
+ void PrivacySandboxHandler::HandleSetFledgeJoiningAllowed(
+@@ -78,6 +82,7 @@ void PrivacySandboxHandler::HandleGetFledgeState(
+                      weak_ptr_factory_.GetWeakPtr(), callback_id));
+ }
+ 
++/*
+ void PrivacySandboxHandler::HandleSetTopicAllowed(
+     const base::Value::List& args) {
+   const int topic_id = args[0].GetInt();
+@@ -113,6 +118,7 @@ void PrivacySandboxHandler::HandleTopicsToggleChanged(
+ 
+   GetPrivacySandboxService()->TopicsToggleChanged(toggle_value);
+ }
++*/
+ 
+ void PrivacySandboxHandler::OnFledgeJoiningSitesRecieved(
+     const std::string& callback_id,
+diff --git a/chrome/browser/ui/webui/settings/site_settings_handler.cc b/chrome/browser/ui/webui/settings/site_settings_handler.cc
+index 03fc1f8a18..682fe61739 100644
+--- a/chrome/browser/ui/webui/settings/site_settings_handler.cc
++++ b/chrome/browser/ui/webui/settings/site_settings_handler.cc
+@@ -32,7 +32,9 @@
+ #include "chrome/browser/bluetooth/bluetooth_chooser_context_factory.h"
+ #include "chrome/browser/browsing_data/chrome_browsing_data_model_delegate.h"
+ #include "chrome/browser/browsing_data/cookies_tree_model.h"
++/*
+ #include "chrome/browser/browsing_topics/browsing_topics_service_factory.h"
++*/
+ #include "chrome/browser/content_settings/chrome_content_settings_utils.h"
+ #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
+ #include "chrome/browser/file_system_access/chrome_file_system_access_permission_context.h"
+@@ -65,7 +67,9 @@
+ #include "chrome/common/url_constants.h"
+ #include "chrome/grit/generated_resources.h"
+ #include "components/browsing_data/content/browsing_data_model.h"
++/*
+ #include "components/browsing_topics/browsing_topics_service.h"
++*/
+ #include "components/content_settings/core/browser/cookie_settings.h"
+ #include "components/content_settings/core/browser/website_settings_registry.h"
+ #include "components/content_settings/core/common/content_settings.h"
+diff --git a/chrome/test/BUILD.gn b/chrome/test/BUILD.gn
+index 72cdcc7721..cdd5f8842c 100644
+--- a/chrome/test/BUILD.gn
++++ b/chrome/test/BUILD.gn
+@@ -366,7 +366,6 @@ static_library("test_support") {
+     "//chrome/renderer",
+     "//chrome/utility",
+     "//components/bookmarks/test",
+-    "//components/browsing_topics:test_support",
+     "//components/captive_portal/core:test_support",
+     "//components/consent_auditor:test_support",
+     "//components/content_settings/core/browser",
+@@ -1638,7 +1637,6 @@ if (!is_android) {
+       "//components/browsing_data/content",
+       "//components/browsing_data/content:test_support",
+       "//components/browsing_data/core",
+-      "//components/browsing_topics",
+       "//components/captive_portal/content",
+       "//components/captive_portal/core",
+       "//components/captive_portal/core:buildflags",
+@@ -2088,8 +2086,6 @@ if (!is_android) {
+       "../browser/browsing_data/counters/sync_aware_counter_browsertest.cc",
+       "../browser/browsing_data/incognito_browsing_data_browsertest.cc",
+       "../browser/browsing_data/navigation_entry_remover_browsertest.cc",
+-      "../browser/browsing_topics/browsing_topics_internals_browsertest.cc",
+-      "../browser/browsing_topics/browsing_topics_service_browsertest.cc",
+       "../browser/cart/cart_service_browsertest.cc",
+       "../browser/cart/fetch_discount_worker_browsertest.cc",
+       "../browser/chained_back_navigation_tracker_browsertest.cc",
+@@ -6551,7 +6547,6 @@ test("unit_tests") {
+     "//components/browsing_data/content",
+     "//components/browsing_data/content:test_support",
+     "//components/browsing_data/core",
+-    "//components/browsing_topics",
+     "//components/captive_portal/content",
+     "//components/captive_portal/core:buildflags",
+     "//components/certificate_transparency",
+diff --git a/components/BUILD.gn b/components/BUILD.gn
+index 3fb7396336..ac8cef4ee5 100644
+--- a/components/BUILD.gn
++++ b/components/BUILD.gn
+@@ -109,7 +109,6 @@ test("components_unittests") {
+       "test/data/ad_tagging/",
+       "test/data/autofill/",
+       "test/data/bookmarks/",
+-      "test/data/browsing_topics/",
+       "test/data/crx_file/",
+       "test/data/custom_handlers/",
+       "test/data/device_signals/",
+@@ -405,8 +404,6 @@ test("components_unittests") {
+       "//components/autofill/content/renderer:unit_tests",
+       "//components/autofill/core/common/mojom:unit_tests",
+       "//components/browsing_data/content:unit_tests",
+-      "//components/browsing_topics:unit_tests",
+-      "//components/browsing_topics/common:unit_tests",
+       "//components/captive_portal/content:unit_tests",
+       "//components/cast_receiver:unit_tests",
+       "//components/cast_streaming:unit_tests",
+diff --git a/components/content_settings/browser/page_specific_content_settings.cc b/components/content_settings/browser/page_specific_content_settings.cc
+index 1866be61c5..55d97f42e8 100644
+--- a/components/content_settings/browser/page_specific_content_settings.cc
++++ b/components/content_settings/browser/page_specific_content_settings.cc
+@@ -34,7 +34,9 @@
+ #include "components/content_settings/core/common/content_settings_utils.h"
+ #include "components/content_settings/core/common/features.h"
+ #include "components/prefs/pref_service.h"
++/*
+ #include "components/privacy_sandbox/canonical_topic.h"
++*/
+ #include "components/privacy_sandbox/privacy_sandbox_features.h"
+ #include "content/public/browser/browser_thread.h"
+ #include "content/public/browser/cookie_access_details.h"
+@@ -80,7 +82,9 @@ constexpr auto kBlockedMediaIndicatorDismissDelay = base::Minutes(1);
+ 
+ // Determines which taxonomy is used to generate sample topics for the Topics
+ // API.
++/*
+ constexpr int kTopicsAPISampleDataTaxonomy = 1;
++*/
+ 
+ bool WillNavigationCreateNewPageSpecificContentSettingsOnCommit(
+     content::NavigationHandle* navigation_handle) {
+@@ -756,6 +760,7 @@ void PageSpecificContentSettings::InterestGroupJoined(
+ }
+ 
+ // static
++/*
+ void PageSpecificContentSettings::TopicAccessed(
+     content::RenderFrameHost* rfh,
+     const url::Origin& api_origin,
+@@ -767,6 +772,7 @@ void PageSpecificContentSettings::TopicAccessed(
+     settings->OnTopicAccessed(api_origin, blocked_by_policy, topic);
+   }
+ }
++*/
+ 
+ // static
+ content::WebContentsObserver*
+@@ -1126,6 +1132,7 @@ void PageSpecificContentSettings::OnInterestGroupJoined(
+   MaybeNotifySiteDataObservers(access_details);
+ }
+ 
++/*
+ void PageSpecificContentSettings::OnTopicAccessed(
+     const url::Origin& api_origin,
+     bool blocked_by_policy,
+@@ -1135,6 +1142,7 @@ void PageSpecificContentSettings::OnTopicAccessed(
+   MaybeUpdateParent(&PageSpecificContentSettings::OnTopicAccessed, api_origin,
+                     blocked_by_policy, topic);
+ }
++*/
+ 
+ void PageSpecificContentSettings::OnTrustTokenAccessed(
+     const url::Origin& api_origin,
+@@ -1453,6 +1461,7 @@ bool PageSpecificContentSettings::HasContentSettingChangedViaPageInfo(
+          content_settings_changed_via_page_info_.end();
+ }
+ 
++/*
+ bool PageSpecificContentSettings::HasAccessedTopics() const {
+   return !GetAccessedTopics().empty();
+ }
+@@ -1473,6 +1482,7 @@ PageSpecificContentSettings::GetAccessedTopics() const {
+   }
+   return {accessed_topics_.begin(), accessed_topics_.end()};
+ }
++*/
+ 
+ bool PageSpecificContentSettings::HasJoinedUserToInterestGroup() const {
+   return !allowed_interest_group_api_.empty();
+diff --git a/components/content_settings/browser/page_specific_content_settings.h b/components/content_settings/browser/page_specific_content_settings.h
+index 451657b285..4a07f9b6cf 100644
+--- a/components/content_settings/browser/page_specific_content_settings.h
++++ b/components/content_settings/browser/page_specific_content_settings.h
+@@ -29,7 +29,9 @@
+ #include "components/content_settings/core/browser/host_content_settings_map.h"
+ #include "components/content_settings/core/common/content_settings.h"
+ #include "components/content_settings/core/common/content_settings_types.h"
++/*
+ #include "components/privacy_sandbox/canonical_topic.h"
++*/
+ #include "content/public/browser/allow_service_worker_result.h"
+ #include "content/public/browser/page_user_data.h"
+ #include "content/public/browser/render_frame_host.h"
+@@ -58,7 +60,9 @@ enum class SiteDataType {
+   kServiceWorker,
+   kSharedWorker,
+   kInterestGroup,
++  /*
+   kTopic,
++  */
+   kTrustToken,
+ };
+ 
+@@ -280,10 +284,12 @@ class PageSpecificContentSettings
+                                   bool blocked_by_policy);
+ 
+   // Called when |api_origin| attempts to access browsing topics.
++  /*
+   static void TopicAccessed(content::RenderFrameHost* rfh,
+                             const url::Origin& api_origin,
+                             bool blocked_by_policy,
+                             privacy_sandbox::CanonicalTopic topic);
++  */
+ 
+   static content::WebContentsObserver* GetWebContentsObserverForTest(
+       content::WebContents* web_contents);
+@@ -408,9 +414,11 @@ class PageSpecificContentSettings
+                               bool blocked_by_policy);
+   void OnInterestGroupJoined(const url::Origin& api_origin,
+                              bool blocked_by_policy);
++  /*
+   void OnTopicAccessed(const url::Origin& api_origin,
+                        bool blocked_by_policy,
+                        privacy_sandbox::CanonicalTopic topic);
++  */
+   void OnTrustTokenAccessed(const url::Origin& api_origin, bool blocked);
+   void OnBrowsingDataAccessed(BrowsingDataModel::DataKey data_key,
+                               BrowsingDataModel::StorageType storage_type,
+@@ -458,7 +466,9 @@ class PageSpecificContentSettings
+   bool HasAccessedTopics() const;
+ 
+   // Returns the topics that were accessed by this page.
++  /*
+   std::vector<privacy_sandbox::CanonicalTopic> GetAccessedTopics() const;
++  */
+ 
+   // Runs any queued updates in |updates_queued_during_prerender_|, should be
+   // called after the page activates.
+@@ -633,7 +643,9 @@ class PageSpecificContentSettings
+   std::vector<url::Origin> blocked_interest_group_api_;
+ 
+   // Contains topics that were accessed by this page.
++  /*
+   base::flat_set<privacy_sandbox::CanonicalTopic> accessed_topics_;
++  */
+ 
+   // The Geolocation, camera, and/or microphone permission was granted to this
+   // origin from a permission prompt that was triggered by the currently active
+diff --git a/components/page_info/page_info.cc b/components/page_info/page_info.cc
+index b4236e0f6c..05ea4a6e43 100644
+--- a/components/page_info/page_info.cc
++++ b/components/page_info/page_info.cc
+@@ -447,24 +447,32 @@ void PageInfo::RecordPageInfoAction(PageInfoAction action) {
+     return;
+   }
+ 
++  /*
+   bool has_topic = settings->HasAccessedTopics();
++  */
+   bool has_fledge = settings->HasJoinedUserToInterestGroup();
+   switch (action) {
+     case PageInfoAction::PAGE_INFO_OPENED:
+       base::RecordAction(base::UserMetricsAction("PageInfo.Opened"));
+       base::UmaHistogramBoolean("Security.PageInfo.AdPersonalizationRowShown",
+-                                has_fledge || has_topic);
++      //                          has_fledge || has_topic);
++                                has_fledge);
+       break;
+     case PageInfoAction::PAGE_INFO_AD_PERSONALIZATION_PAGE_OPENED:
++      /*
+       if (has_fledge && has_topic) {
+         base::RecordAction(base::UserMetricsAction(
+             "PageInfo.AdPersonalization.OpenedWithFledgeAndTopics"));
+       } else if (has_fledge) {
++      */
++      if (has_fledge) {
+         base::RecordAction(base::UserMetricsAction(
+             "PageInfo.AdPersonalization.OpenedWithFledge"));
++      /*
+       } else if (has_topic) {
+         base::RecordAction(base::UserMetricsAction(
+             "PageInfo.AdPersonalization.OpenedWithTopics"));
++      */
+       }
+       break;
+     case PageInfoAction::PAGE_INFO_AD_PERSONALIZATION_SETTINGS_OPENED:
+@@ -1551,6 +1559,7 @@ void PageInfo::PresentAdPersonalizationData() {
+ 
+   info.has_joined_user_to_interest_group =
+       settings->HasJoinedUserToInterestGroup();
++  /*
+   info.accessed_topics = settings->GetAccessedTopics();
+   std::sort(info.accessed_topics.begin(), info.accessed_topics.end(),
+             [](const privacy_sandbox::CanonicalTopic& a,
+@@ -1558,6 +1567,7 @@ void PageInfo::PresentAdPersonalizationData() {
+               return a.GetLocalizedRepresentation() <
+                      b.GetLocalizedRepresentation();
+             });
++  */
+   ui_->SetAdPersonalizationInfo(info);
+ }
+ 
+diff --git a/components/page_info/page_info_ui.cc b/components/page_info/page_info_ui.cc
+index 8548364389..657fe960c3 100644
+--- a/components/page_info/page_info_ui.cc
++++ b/components/page_info/page_info_ui.cc
+@@ -421,7 +421,8 @@ PageInfoUI::PageFeatureInfo::PageFeatureInfo()
+     : is_vr_presentation_in_headset(false) {}
+ 
+ bool PageInfoUI::AdPersonalizationInfo::is_empty() const {
+-  return !has_joined_user_to_interest_group && accessed_topics.empty();
++  // return !has_joined_user_to_interest_group && accessed_topics.empty();
++  return !has_joined_user_to_interest_group;
+ }
+ 
+ PageInfoUI::AdPersonalizationInfo::AdPersonalizationInfo() = default;
+diff --git a/components/page_info/page_info_ui.h b/components/page_info/page_info_ui.h
+index d592331f8b..22e3821bd3 100644
+--- a/components/page_info/page_info_ui.h
++++ b/components/page_info/page_info_ui.h
+@@ -15,7 +15,9 @@
+ #include "components/content_settings/core/common/content_settings_types.h"
+ #include "components/page_info/page_info.h"
+ #include "components/permissions/object_permission_context_base.h"
++/*
+ #include "components/privacy_sandbox/canonical_topic.h"
++*/
+ #include "components/safe_browsing/buildflags.h"
+ #include "ui/base/models/image_model.h"
+ #include "ui/gfx/native_widget_types.h"
+@@ -195,7 +197,9 @@ class PageInfoUI {
+     bool is_empty() const;
+ 
+     bool has_joined_user_to_interest_group;
++    /*
+     std::vector<privacy_sandbox::CanonicalTopic> accessed_topics;
++    */
+   };
+ 
+   using PermissionInfoList = std::vector<PageInfo::PermissionInfo>;
+diff --git a/components/privacy_sandbox/BUILD.gn b/components/privacy_sandbox/BUILD.gn
+index 87074e60e4..e602618edf 100644
+--- a/components/privacy_sandbox/BUILD.gn
++++ b/components/privacy_sandbox/BUILD.gn
+@@ -95,7 +95,6 @@ if (use_blink) {
+ 
+     deps = [
+       ":tracking_protection_settings",
+-      "//components/browsing_topics/common:common",
+       "//components/keyed_service/core:core",
+       "//components/pref_registry:pref_registry",
+       "//components/prefs",
+@@ -109,15 +108,12 @@ if (use_blink) {
+ 
+   source_set("privacy_sandbox") {
+     sources = [
+-      "canonical_topic.cc",
+-      "canonical_topic.h",
+       "privacy_sandbox_settings_impl.cc",
+     ]
+ 
+     deps = [
+       ":privacy_sandbox_prefs",
+       ":tracking_protection_settings",
+-      "//components/browsing_topics/common:common",
+       "//components/content_settings/core/browser",
+       "//components/content_settings/core/common",
+       "//components/keyed_service/core:core",
+@@ -150,7 +146,6 @@ if (use_blink) {
+       ":privacy_sandbox",
+       ":privacy_sandbox_prefs",
+       "//base/test:test_support",
+-      "//components/browsing_topics:test_support",
+       "//components/content_settings/core/browser:browser",
+       "//components/content_settings/core/common:common",
+       "//components/content_settings/core/test:test_support",
+@@ -196,7 +191,6 @@ source_set("unit_tests") {
+     deps += [
+       ":privacy_sandbox",
+       ":test_support",
+-      "//components/browsing_topics:test_support",
+       "//components/content_settings/core/browser:browser",
+       "//components/content_settings/core/test:test_support",
+       "//components/privacy_sandbox/privacy_sandbox_attestations",
+diff --git a/components/privacy_sandbox/privacy_sandbox_settings.h b/components/privacy_sandbox/privacy_sandbox_settings.h
+index 52550b394b..118d4f91c8 100644
+--- a/components/privacy_sandbox/privacy_sandbox_settings.h
++++ b/components/privacy_sandbox/privacy_sandbox_settings.h
+@@ -5,7 +5,9 @@
+ #ifndef COMPONENTS_PRIVACY_SANDBOX_PRIVACY_SANDBOX_SETTINGS_H_
+ #define COMPONENTS_PRIVACY_SANDBOX_PRIVACY_SANDBOX_SETTINGS_H_
+ 
++/*
+ #include "components/browsing_topics/common/common_types.h"
++*/
+ #include "components/keyed_service/core/keyed_service.h"
+ #include "content/public/browser/interest_group_api_operation.h"
+ 
+@@ -51,7 +53,9 @@ class PrivacySandboxSettings : public KeyedService {
+  public:
+   class Observer {
+    public:
++    /*
+     virtual void OnTopicsDataAccessibleSinceUpdated() {}
++    */
+ 
+     // Fired when the First-Party Sets changes to being `enabled` as a result of
+     // the kPrivacySandboxFirstPartySets preference changing.
+@@ -80,7 +84,9 @@ class PrivacySandboxSettings : public KeyedService {
+     // Whether there is an appropriate level of consent for the Topics API.
+     // When this returns false, access control functions for Topics will
+     // return as not allowed.
++    /*
+     virtual bool HasAppropriateTopicsConsent() const = 0;
++    */
+ 
+     // Whether the profile is subject to being given notice of restrictions to
+     // the standard set of Privacy Sandbox APIs.
+@@ -97,6 +103,7 @@ class PrivacySandboxSettings : public KeyedService {
+     virtual bool IsCookieDeprecationExperimentCurrentlyEligible() const = 0;
+   };
+ 
++  /*
+   // Returns whether the Topics API is allowed at all. If false, Topics API
+   // calculations should not occur. If true, the more specific function,
+   // IsTopicsApiAllowedForContext(), should be consulted for the relevant
+@@ -137,6 +144,7 @@ class PrivacySandboxSettings : public KeyedService {
+   // returned time will have been fuzzed for local privacy, and so may be in the
+   // future, in which case no history is eligible.
+   virtual base::Time TopicsDataAccessibleSince() const = 0;
++  */
+ 
+   // Returns whether any Attribution Reporting operation would ever be allowed.
+   // If false, no attribution reporting operation is allowed (e.g. because the
+@@ -267,7 +275,9 @@ class PrivacySandboxSettings : public KeyedService {
+   virtual void SetAllPrivacySandboxAllowedForTesting() = 0;
+ 
+   // Blocks Topics pref for testing.
++  /*
+   virtual void SetTopicsBlockedForTesting() = 0;
++  */
+ 
+   // Disables the Privacy Sandbox completely if |enabled| is false, if |enabled|
+   // is true, more granular checks will still be performed, and the delegate
+diff --git a/components/privacy_sandbox/privacy_sandbox_settings_impl.cc b/components/privacy_sandbox/privacy_sandbox_settings_impl.cc
+index ef5885b0cd..ed4f60f588 100644
+--- a/components/privacy_sandbox/privacy_sandbox_settings_impl.cc
++++ b/components/privacy_sandbox/privacy_sandbox_settings_impl.cc
+@@ -17,14 +17,18 @@
+ #include "base/strings/string_util.h"
+ #include "base/time/time.h"
+ #include "base/values.h"
++/*
+ #include "components/browsing_topics/common/common_types.h"
+ #include "components/browsing_topics/common/semantic_tree.h"
++*/
+ #include "components/content_settings/core/browser/cookie_settings.h"
+ #include "components/content_settings/core/browser/host_content_settings_map.h"
+ #include "components/content_settings/core/common/pref_names.h"
+ #include "components/prefs/pref_service.h"
+ #include "components/prefs/scoped_user_pref_update.h"
++/*
+ #include "components/privacy_sandbox/canonical_topic.h"
++*/
+ #include "components/privacy_sandbox/privacy_sandbox_attestations/privacy_sandbox_attestations.h"
+ #include "components/privacy_sandbox/privacy_sandbox_features.h"
+ #include "components/privacy_sandbox/privacy_sandbox_prefs.h"
+@@ -44,12 +48,14 @@ namespace privacy_sandbox {
+ 
+ namespace {
+ 
++/*
+ constexpr char kBlockedTopicsTopicKey[] = "topic";
+ constexpr char kBlockedTopicsBlockTimeKey[] = "blockedOn";
+ 
+ constexpr char kIsTopicsAllowedHistogram[] = "PrivacySandbox.IsTopicsAllowed";
+ constexpr char kIsTopicsAllowedForContextHistogram[] =
+     "PrivacySandbox.IsTopicsAllowedForContext";
++*/
+ constexpr char kIsAttributionReportingEverAllowedHistogram[] =
+     "PrivacySandbox.IsAttributionReportingEverAllowed";
+ constexpr char kIsAttributionReportingAllowedHistogram[] =
+@@ -94,6 +100,7 @@ std::vector<ContentSettingsPattern> FledgeBlockToContentSettingsPatterns(
+ 
+ // Returns a base::Value::Dict for storage in prefs that represents |topic|
+ // blocked at the current time.
++/*
+ base::Value::Dict CreateBlockedTopicEntry(const CanonicalTopic& topic) {
+   return base::Value::Dict()
+       .Set(kBlockedTopicsTopicKey, topic.ToValue())
+@@ -115,6 +122,7 @@ std::set<browsing_topics::Topic> GetTopicsSetFromString(
+   }
+   return result;
+ }
++*/
+ 
+ }  // namespace
+ 
+@@ -188,6 +196,7 @@ PrivacySandboxSettingsImpl::PrivacySandboxSettingsImpl(
+ 
+ PrivacySandboxSettingsImpl::~PrivacySandboxSettingsImpl() = default;
+ 
++/*
+ PrivacySandboxSettingsImpl::Status
+ PrivacySandboxSettingsImpl::GetM1TopicAllowedStatus() const {
+   auto control_status = GetM1PrivacySandboxApiEnabledStatus(
+@@ -380,6 +389,7 @@ base::Time PrivacySandboxSettingsImpl::TopicsDataAccessibleSince() const {
+   return pref_service_->GetTime(
+       prefs::kPrivacySandboxTopicsDataAccessibleSince);
+ }
++*/
+ 
+ PrivacySandboxSettingsImpl::Status
+ PrivacySandboxSettingsImpl::GetM1AttributionReportingAllowedStatus(
+@@ -747,7 +757,9 @@ bool PrivacySandboxSettingsImpl::IsPrivacySandboxEnabled() const {
+ void PrivacySandboxSettingsImpl::SetAllPrivacySandboxAllowedForTesting() {
+   if (base::FeatureList::IsEnabled(privacy_sandbox::kPrivacySandboxSettings4)) {
+     pref_service_->SetBoolean(prefs::kPrivacySandboxM1FledgeEnabled, true);
++    /*
+     pref_service_->SetBoolean(prefs::kPrivacySandboxM1TopicsEnabled, true);
++    */
+     pref_service_->SetBoolean(prefs::kPrivacySandboxM1AdMeasurementEnabled,
+                               true);
+     return;
+@@ -756,6 +768,7 @@ void PrivacySandboxSettingsImpl::SetAllPrivacySandboxAllowedForTesting() {
+   pref_service_->SetBoolean(prefs::kPrivacySandboxApisEnabledV2, true);
+ }
+ 
++/*
+ void PrivacySandboxSettingsImpl::SetTopicsBlockedForTesting() {
+   if (base::FeatureList::IsEnabled(privacy_sandbox::kPrivacySandboxSettings4)) {
+     pref_service_->SetBoolean(prefs::kPrivacySandboxM1TopicsEnabled, false);
+@@ -764,6 +777,7 @@ void PrivacySandboxSettingsImpl::SetTopicsBlockedForTesting() {
+ 
+   pref_service_->SetBoolean(prefs::kPrivacySandboxApisEnabledV2, false);
+ }
++*/
+ 
+ void PrivacySandboxSettingsImpl::SetPrivacySandboxEnabled(bool enabled) {
+   pref_service_->SetBoolean(prefs::kPrivacySandboxApisEnabledV2, enabled);
+@@ -786,7 +800,9 @@ bool PrivacySandboxSettingsImpl::IsRestrictedNoticeEnabled() const {
+ }
+ 
+ void PrivacySandboxSettingsImpl::OnCookiesCleared() {
++  /*
+   SetTopicsDataAccessibleFromNow();
++  */
+ }
+ 
+ void PrivacySandboxSettingsImpl::OnRelatedWebsiteSetsEnabledPrefChanged() {
+@@ -826,6 +842,7 @@ bool PrivacySandboxSettingsImpl::IsPrivacySandboxEnabledForContext(
+       net::CookieSettingOverrides());
+ }
+ 
++/*
+ void PrivacySandboxSettingsImpl::SetTopicsDataAccessibleFromNow() const {
+   pref_service_->SetTime(prefs::kPrivacySandboxTopicsDataAccessibleSince,
+                          base::Time::Now());
+@@ -834,6 +851,7 @@ void PrivacySandboxSettingsImpl::SetTopicsDataAccessibleFromNow() const {
+     observer.OnTopicsDataAccessibleSinceUpdated();
+   }
+ }
++*/
+ 
+ PrivacySandboxSettingsImpl::Status
+ PrivacySandboxSettingsImpl::GetSiteAccessAllowedStatus(
+@@ -867,7 +885,8 @@ PrivacySandboxSettingsImpl::GetPrivacySandboxAllowedStatus(
+ PrivacySandboxSettingsImpl::Status
+ PrivacySandboxSettingsImpl::GetM1PrivacySandboxApiEnabledStatus(
+     const std::string& pref_name) const {
+-  DCHECK(pref_name == prefs::kPrivacySandboxM1TopicsEnabled ||
++  // DCHECK(pref_name == prefs::kPrivacySandboxM1TopicsEnabled ||
++  DCHECK(
+          pref_name == prefs::kPrivacySandboxM1FledgeEnabled ||
+          pref_name == prefs::kPrivacySandboxM1AdMeasurementEnabled);
+   if (features::kCookieDeprecationTestingDisableAdsAPIs.Get()) {
+diff --git a/components/privacy_sandbox/privacy_sandbox_settings_impl.h b/components/privacy_sandbox/privacy_sandbox_settings_impl.h
+index 9a9dc91073..bdaa5ab0e9 100644
+--- a/components/privacy_sandbox/privacy_sandbox_settings_impl.h
++++ b/components/privacy_sandbox/privacy_sandbox_settings_impl.h
+@@ -5,7 +5,9 @@
+ #ifndef COMPONENTS_PRIVACY_SANDBOX_PRIVACY_SANDBOX_SETTINGS_IMPL_H_
+ #define COMPONENTS_PRIVACY_SANDBOX_PRIVACY_SANDBOX_SETTINGS_IMPL_H_
+ 
++/*
+ #include "components/browsing_topics/common/common_types.h"
++*/
+ #include "components/privacy_sandbox/privacy_sandbox_settings.h"
+ 
+ #include <set>
+@@ -45,6 +47,7 @@ class PrivacySandboxSettingsImpl : public PrivacySandboxSettings,
+   ~PrivacySandboxSettingsImpl() override;
+ 
+   // PrivacySandboxSettings:
++  /*
+   bool IsTopicsAllowed() const override;
+   bool IsTopicsAllowedForContext(
+       const url::Origin& top_frame_origin,
+@@ -55,6 +58,7 @@ class PrivacySandboxSettingsImpl : public PrivacySandboxSettings,
+   bool IsTopicPrioritized(const CanonicalTopic& topic) override;
+   void ClearTopicSettings(base::Time start_time, base::Time end_time) override;
+   base::Time TopicsDataAccessibleSince() const override;
++  */
+   bool IsAttributionReportingEverAllowed() const override;
+   bool IsAttributionReportingAllowed(
+       const url::Origin& top_frame_origin,
+@@ -98,7 +102,9 @@ class PrivacySandboxSettingsImpl : public PrivacySandboxSettings,
+       const url::Origin& context_origin) const override;
+   bool IsPrivacySandboxEnabled() const override;
+   void SetAllPrivacySandboxAllowedForTesting() override;
++  /*
+   void SetTopicsBlockedForTesting() override;
++  */
+   void SetPrivacySandboxEnabled(bool enabled) override;
+   bool IsPrivacySandboxRestricted() const override;
+   bool IsPrivacySandboxCurrentlyUnrestricted() const override;
+@@ -136,7 +142,9 @@ class PrivacySandboxSettingsImpl : public PrivacySandboxSettings,
+       const absl::optional<url::Origin>& top_frame_origin,
+       const GURL& url) const;
+ 
++  /*
+   void SetTopicsDataAccessibleFromNow() const;
++  */
+ 
+   // These values are persisted to logs. Entries should not be renumbered and
+   // numeric values should never be reused.
+@@ -164,10 +172,12 @@ class PrivacySandboxSettingsImpl : public PrivacySandboxSettings,
+       Status status);
+ 
+   // Get the Topics that are disabled by Finch.
++  /*
+   const std::set<browsing_topics::Topic>& GetFinchDisabledTopics();
+ 
+   // Get the Topics that are prioritized for top topic selection by Finch.
+   const std::set<browsing_topics::Topic>& GetFinchPrioritizedTopics();
++  */
+ 
+   // Whether the site associated with the URL is allowed to access privacy
+   // sandbox APIs within the context of |top_frame_origin|.
+@@ -187,7 +197,9 @@ class PrivacySandboxSettingsImpl : public PrivacySandboxSettings,
+ 
+   // Whether the Topics API can be allowed given the current
+   // environment or the reason why it is not allowed.
++  /*
+   Status GetM1TopicAllowedStatus() const;
++  */
+ 
+   // Whether Attribution Reporting API can be allowed given the current
+   // environment or the reason why it is not allowed.
+@@ -223,11 +235,13 @@ class PrivacySandboxSettingsImpl : public PrivacySandboxSettings,
+ 
+   // Which topics are disabled by Finch; This is set and read by
+   // GetFinchDisabledTopics.
++  /*
+   std::set<browsing_topics::Topic> finch_disabled_topics_;
+ 
+   // Which topics are prioritized in top topic selection by Finch. This is set
+   // and read by GetFinchPrioritizedTopics.
+   std::set<browsing_topics::Topic> finch_prioritized_topics_;
++  */
+ };
+ 
+ }  // namespace privacy_sandbox
+diff --git a/content/browser/BUILD.gn b/content/browser/BUILD.gn
+index 26f1a72293..13357a7090 100644
+--- a/content/browser/BUILD.gn
++++ b/content/browser/BUILD.gn
+@@ -74,7 +74,6 @@ source_set("browser") {
+     "//cc/paint",
+     "//components/attribution_reporting:mojom",
+     "//components/back_forward_cache:enum",
+-    "//components/browsing_topics/common:common",
+     "//components/cbor",
+     "//components/discardable_memory/common",
+     "//components/discardable_memory/service",
+@@ -645,16 +644,6 @@ source_set("browser") {
+     "browsing_data/storage_partition_code_cache_data_remover.h",
+     "browsing_instance.cc",
+     "browsing_instance.h",
+-    "browsing_topics/browsing_topics_document_host.cc",
+-    "browsing_topics/browsing_topics_document_host.h",
+-    "browsing_topics/browsing_topics_site_data_manager_impl.cc",
+-    "browsing_topics/browsing_topics_site_data_manager_impl.h",
+-    "browsing_topics/browsing_topics_site_data_storage.cc",
+-    "browsing_topics/browsing_topics_site_data_storage.h",
+-    "browsing_topics/browsing_topics_url_loader_interceptor.cc",
+-    "browsing_topics/browsing_topics_url_loader_interceptor.h",
+-    "browsing_topics/header_util.cc",
+-    "browsing_topics/header_util.h",
+     "buckets/bucket_context.h",
+     "buckets/bucket_host.cc",
+     "buckets/bucket_host.h",
+diff --git a/content/browser/browser_interface_binders.cc b/content/browser/browser_interface_binders.cc
+index 0faec87d74..4fd1a60870 100644
+--- a/content/browser/browser_interface_binders.cc
++++ b/content/browser/browser_interface_binders.cc
+@@ -22,7 +22,6 @@
+ #include "content/browser/bad_message.h"
+ #include "content/browser/browser_context_impl.h"
+ #include "content/browser/browser_main_loop.h"
+-#include "content/browser/browsing_topics/browsing_topics_document_host.h"
+ #include "content/browser/contacts/contacts_manager_impl.h"
+ #include "content/browser/content_index/content_index_service_impl.h"
+ #include "content/browser/cookie_deprecation_label/cookie_deprecation_label_document_service.h"
+@@ -1142,12 +1141,14 @@ void PopulateBinderMapWithContext(
+       &EmptyBinderForFrame<blink::mojom::CredentialManager>));
+   map->Add<blink::mojom::LCPCriticalPathPredictorHost>(base::BindRepeating(
+       &EmptyBinderForFrame<blink::mojom::LCPCriticalPathPredictorHost>));
++  /*
+   if (base::FeatureList::IsEnabled(blink::features::kBrowsingTopics) &&
+       base::FeatureList::IsEnabled(
+           blink::features::kBrowsingTopicsDocumentAPI)) {
+     map->Add<blink::mojom::BrowsingTopicsDocumentService>(
+         base::BindRepeating(&BrowsingTopicsDocumentHost::CreateMojoService));
+   }
++  */
+   if (base::FeatureList::IsEnabled(blink::features::kWebEnvironmentIntegrity)) {
+     map->Add<blink::mojom::EnvironmentIntegrityService>(base::BindRepeating(
+         &EmptyBinderForFrame<blink::mojom::EnvironmentIntegrityService>));
+diff --git a/content/browser/loader/subresource_proxying_url_loader.cc b/content/browser/loader/subresource_proxying_url_loader.cc
+index c220eb372d..bab2543aa6 100644
+--- a/content/browser/loader/subresource_proxying_url_loader.cc
++++ b/content/browser/loader/subresource_proxying_url_loader.cc
+@@ -4,7 +4,9 @@
+ 
+ #include "content/browser/loader/subresource_proxying_url_loader.h"
+ 
++/*
+ #include "content/browser/browsing_topics/browsing_topics_url_loader_interceptor.h"
++*/
+ #include "content/browser/interest_group/ad_auction_url_loader_interceptor.h"
+ #include "services/network/public/cpp/shared_url_loader_factory.h"
+ #include "services/network/public/mojom/early_hints.mojom.h"
+@@ -26,11 +28,13 @@ SubresourceProxyingURLLoader::SubresourceProxyingURLLoader(
+   CHECK(resource_request_.browsing_topics ||
+         resource_request_.ad_auction_headers);
+ 
++  /*
+   if (resource_request_.browsing_topics) {
+     interceptors_.push_back(
+         std::make_unique<BrowsingTopicsURLLoaderInterceptor>(
+             document, resource_request_));
+   }
++  */
+ 
+   if (resource_request_.ad_auction_headers) {
+     interceptors_.push_back(std::make_unique<AdAuctionURLLoaderInterceptor>(
+diff --git a/content/browser/renderer_host/navigation_request.cc b/content/browser/renderer_host/navigation_request.cc
+index 6ad371e1f9..720d6cb52f 100644
+--- a/content/browser/renderer_host/navigation_request.cc
++++ b/content/browser/renderer_host/navigation_request.cc
+@@ -43,7 +43,9 @@
+ #include "build/buildflag.h"
+ #include "build/chromeos_buildflags.h"
+ #include "content/browser/blob_storage/chrome_blob_storage_context.h"
++/*
+ #include "content/browser/browsing_topics/header_util.h"
++*/
+ #include "content/browser/child_process_security_policy_impl.h"
+ #include "content/browser/client_hints/client_hints.h"
+ #include "content/browser/devtools/devtools_instrumentation.h"
+@@ -936,6 +938,7 @@ void PersistOriginTrialsFromHeaders(
+ // Returns the topics header for a navigation request. Returns absl::nullopt if
+ // the request isn't eligible for topics. This should align with the handling in
+ // `GetTopicsHeaderValueForSubresourceRequest()`.
++/*
+ absl::optional<std::string> GetTopicsHeaderValueForNavigationRequest(
+     FrameTreeNode* frame_tree_node,
+     const GURL& url) {
+@@ -998,8 +1001,8 @@ absl::optional<std::string> GetTopicsHeaderValueForNavigationRequest(
+   bool topics_eligible = GetContentClient()->browser()->HandleTopicsWebApi(
+       origin, rfh->GetMainFrame(),
+       browsing_topics::ApiCallerSource::kIframeAttribute,
+-      /*get_topics=*/true,
+-      /*observe=*/false, topics);
++      get_topics=true,
++      observe=false, topics);
+ 
+   if (!topics_eligible) {
+     return absl::nullopt;
+@@ -1011,6 +1014,7 @@ absl::optional<std::string> GetTopicsHeaderValueForNavigationRequest(
+ 
+   return DeriveTopicsHeaderValue(topics, num_versions_in_epochs);
+ }
++*/
+ 
+ ukm::SourceId GetPageUkmSourceId(FrameTreeNode* frame_tree_node) {
+   CHECK(frame_tree_node);
+@@ -1926,6 +1930,7 @@ NavigationRequest::NavigationRequest(
+                         &commit_params_->post_content_type);
+     }
+ 
++    /*
+     absl::optional<std::string> topics_header_value =
+         GetTopicsHeaderValueForNavigationRequest(frame_tree_node,
+                                                  common_params_->url);
+@@ -1935,6 +1940,7 @@ NavigationRequest::NavigationRequest(
+     if (topics_eligible_) {
+       headers.SetHeader(kBrowsingTopicsRequestHeaderKey, *topics_header_value);
+     }
++    */
+   }
+ 
+   begin_params_->headers = headers.ToString();
+@@ -5186,6 +5192,7 @@ void NavigationRequest::OnRedirectChecksComplete(
+   // regardless of cross-origin-ness, the timestamp can also affect the
+   // candidate epochs where the topics are derived from, thus resulting in
+   // different topics across redirects.
++  /*
+   if (topics_eligible_) {
+     topics_eligible_ = false;
+ 
+@@ -5215,6 +5222,7 @@ void NavigationRequest::OnRedirectChecksComplete(
+     modified_headers.SetHeader(kBrowsingTopicsRequestHeaderKey,
+                                *topics_header_value);
+   }
++  */
+ 
+   if (shared_storage_writable_) {
+     // On a redirect, the PermissionsPolicy may change the status of this
+@@ -5569,9 +5577,11 @@ void NavigationRequest::CommitErrorPage(
+     }
+   }
+ 
++  /*
+   if (topics_eligible_) {
+     topics_eligible_ = false;
+   }
++  */
+ 
+   base::WeakPtr<NavigationRequest> weak_self(weak_factory_.GetWeakPtr());
+   ReadyToCommitNavigation(true /* is_error */);
+@@ -5668,6 +5678,7 @@ void NavigationRequest::CommitNavigation() {
+       frame_tree_node()->frame_tree().GetSessionStorageKey(
+           commit_params_->storage_key);
+ 
++  /*
+   if (topics_eligible_) {
+     topics_eligible_ = false;
+ 
+@@ -5678,6 +5689,7 @@ void NavigationRequest::CommitNavigation() {
+           browsing_topics::ApiCallerSource::kIframeAttribute);
+     }
+   }
++  */
+ 
+   if (!NavigationTypeUtils::IsSameDocument(common_params_->navigation_type)) {
+     // We want to record this for the frame that we are navigating away from.
+diff --git a/content/browser/renderer_host/navigation_request.h b/content/browser/renderer_host/navigation_request.h
+index ae74380532..8cc2035767 100644
+--- a/content/browser/renderer_host/navigation_request.h
++++ b/content/browser/renderer_host/navigation_request.h
+@@ -2608,7 +2608,9 @@ class CONTENT_EXPORT NavigationRequest
+   // redirect. If `topics_eligible_` is true, the request headers will contain
+   // the "Sec-Browsing-Topics" header, and if the corresponding response headers
+   // contain "Observe-Browsing-Topics: ?1", a topic observation will be stored.
++  /*
+   bool topics_eligible_ = false;
++  */
+ 
+   // Whether or not the request is eligible to write to shared storage from
+   // response headers. See
+diff --git a/content/browser/storage_partition_impl.cc b/content/browser/storage_partition_impl.cc
+index 074fd4c697..9dce161d7c 100644
+--- a/content/browser/storage_partition_impl.cc
++++ b/content/browser/storage_partition_impl.cc
+@@ -60,7 +60,9 @@
+ #include "content/browser/broadcast_channel/broadcast_channel_service.h"
+ #include "content/browser/browsing_data/clear_site_data_handler.h"
+ #include "content/browser/browsing_data/storage_partition_code_cache_data_remover.h"
++/*
+ #include "content/browser/browsing_topics/browsing_topics_site_data_manager_impl.h"
++*/
+ #include "content/browser/buckets/bucket_manager.h"
+ #include "content/browser/cache_storage/cache_storage_control_wrapper.h"
+ #include "content/browser/code_cache/generated_code_cache.h"
+@@ -1537,11 +1539,13 @@ void StoragePartitionImpl::Initialize(
+   }
+ 
+   // The Topics API is not available in Incognito mode.
++  /*
+   if (!is_in_memory() &&
+       base::FeatureList::IsEnabled(blink::features::kBrowsingTopics)) {
+     browsing_topics_site_data_manager_ =
+         std::make_unique<BrowsingTopicsSiteDataManagerImpl>(path);
+   }
++  */
+ 
+   GeneratedCodeCacheSettings settings =
+       GetContentClient()->browser()->GetGeneratedCodeCacheSettings(
+@@ -1922,11 +1926,13 @@ InterestGroupManager* StoragePartitionImpl::GetInterestGroupManager() {
+   return interest_group_manager_.get();
+ }
+ 
++/*
+ BrowsingTopicsSiteDataManager*
+ StoragePartitionImpl::GetBrowsingTopicsSiteDataManager() {
+   DCHECK(initialized_);
+   return browsing_topics_site_data_manager_.get();
+ }
++*/
+ 
+ ContentIndexContextImpl* StoragePartitionImpl::GetContentIndexContext() {
+   DCHECK(initialized_);
+diff --git a/content/browser/storage_partition_impl.h b/content/browser/storage_partition_impl.h
+index a1b55ae3e9..9db54029c9 100644
+--- a/content/browser/storage_partition_impl.h
++++ b/content/browser/storage_partition_impl.h
+@@ -206,7 +206,9 @@ class CONTENT_EXPORT StoragePartitionImpl
+   ZoomLevelDelegate* GetZoomLevelDelegate() override;
+   PlatformNotificationContextImpl* GetPlatformNotificationContext() override;
+   InterestGroupManager* GetInterestGroupManager() override;
++  /*
+   BrowsingTopicsSiteDataManager* GetBrowsingTopicsSiteDataManager() override;
++  */
+   leveldb_proto::ProtoDatabaseProvider* GetProtoDatabaseProvider() override;
+   // Use outside content.
+   AttributionDataModel* GetAttributionDataModel() override;
+@@ -697,8 +699,10 @@ class CONTENT_EXPORT StoragePartitionImpl
+   std::unique_ptr<AttributionManager> attribution_manager_;
+   std::unique_ptr<FontAccessManager> font_access_manager_;
+   std::unique_ptr<InterestGroupManagerImpl> interest_group_manager_;
++  /*
+   std::unique_ptr<BrowsingTopicsSiteDataManager>
+       browsing_topics_site_data_manager_;
++  */
+   std::unique_ptr<AggregationService> aggregation_service_;
+ #if BUILDFLAG(ENABLE_LIBRARY_CDMS)
+   std::unique_ptr<CdmStorageManager> cdm_storage_manager_;
+diff --git a/content/public/browser/BUILD.gn b/content/public/browser/BUILD.gn
+index eb6a535469..a10e5bcfc3 100644
+--- a/content/public/browser/BUILD.gn
++++ b/content/public/browser/BUILD.gn
+@@ -96,7 +96,6 @@ source_set("browser_sources") {
+     "browsing_data_remover.h",
+     "browsing_data_remover_delegate.h",
+     "browsing_instance_id.h",
+-    "browsing_topics_site_data_manager.h",
+     "cdm_registry.h",
+     "certificate_request_result_type.h",
+     "child_process_data.cc",
+@@ -503,7 +502,6 @@ source_set("browser_sources") {
+   public_deps = [
+     "//base",
+     "//build:chromecast_buildflags",
+-    "//components/browsing_topics/common:common",
+     "//components/download/public/common:public",
+     "//components/file_access",
+     "//components/services/storage/privileged/mojom",
+diff --git a/content/public/browser/content_browser_client.cc b/content/public/browser/content_browser_client.cc
+index 01ac846da8..da9451a289 100644
+--- a/content/public/browser/content_browser_client.cc
++++ b/content/public/browser/content_browser_client.cc
+@@ -72,7 +72,6 @@
+ #include "third_party/blink/public/common/loader/url_loader_throttle.h"
+ #include "third_party/blink/public/common/renderer_preferences/renderer_preferences.h"
+ #include "third_party/blink/public/common/user_agent/user_agent_metadata.h"
+-#include "third_party/blink/public/mojom/browsing_topics/browsing_topics.mojom.h"
+ #include "third_party/blink/public/mojom/file_system_access/file_system_access_cloud_identifier.mojom.h"
+ #include "third_party/blink/public/mojom/file_system_access/file_system_access_error.mojom.h"
+ #include "third_party/blink/public/mojom/origin_trials/origin_trials_settings.mojom.h"
+@@ -1341,6 +1340,7 @@ void ContentBrowserClient::AugmentNavigationDownloadPolicy(
+     bool user_gesture,
+     blink::NavigationDownloadPolicy* download_policy) {}
+ 
++/*
+ bool ContentBrowserClient::HandleTopicsWebApi(
+     const url::Origin& context_origin,
+     content::RenderFrameHost* main_frame,
+@@ -1355,6 +1355,7 @@ int ContentBrowserClient::NumVersionsInTopicsEpochs(
+     content::RenderFrameHost* main_frame) const {
+   return 0;
+ }
++*/
+ 
+ bool ContentBrowserClient::IsBluetoothScanningBlocked(
+     content::BrowserContext* browser_context,
+diff --git a/content/public/browser/content_browser_client.h b/content/public/browser/content_browser_client.h
+index 4068372cff..6e0b4f983c 100644
+--- a/content/public/browser/content_browser_client.h
++++ b/content/public/browser/content_browser_client.h
+@@ -24,7 +24,6 @@
+ #include "build/build_config.h"
+ #include "build/buildflag.h"
+ #include "build/chromeos_buildflags.h"
+-#include "components/browsing_topics/common/common_types.h"
+ #include "components/download/public/common/quarantine_connection.h"
+ #include "components/file_access/scoped_file_access.h"
+ #include "content/common/content_export.h"
+@@ -66,7 +65,6 @@
+ #include "third_party/abseil-cpp/absl/types/optional.h"
+ #include "third_party/blink/public/common/permissions_policy/permissions_policy.h"
+ #include "third_party/blink/public/common/user_agent/user_agent_metadata.h"
+-#include "third_party/blink/public/mojom/browsing_topics/browsing_topics.mojom-forward.h"
+ #include "third_party/blink/public/mojom/file_system_access/file_system_access_cloud_identifier.mojom-forward.h"
+ #include "third_party/blink/public/mojom/file_system_access/file_system_access_error.mojom-forward.h"
+ #include "third_party/blink/public/mojom/manifest/manifest.mojom-forward.h"
+@@ -2292,6 +2290,7 @@ class CONTENT_EXPORT ContentBrowserClient {
+   // is true, topics calculation result will be stored to `topics`. If `observe`
+   // is true, record the observation (i.e. the <calling context site,
+   // top level site> pair) to the `BrowsingTopicsSiteDataStorage` database.
++  /*
+   virtual bool HandleTopicsWebApi(
+       const url::Origin& context_origin,
+       content::RenderFrameHost* main_frame,
+@@ -2299,12 +2298,15 @@ class CONTENT_EXPORT ContentBrowserClient {
+       bool get_topics,
+       bool observe,
+       std::vector<blink::mojom::EpochTopicPtr>& topics);
++  */
+ 
+   // Returns the number of distinct topics epochs versions for `main_frame`.
+   // Must be called when topics are eligible (i.e. `HandleTopicsWebApi` would
+   // return true for the same main frame context).
++  /*
+   virtual int NumVersionsInTopicsEpochs(
+       content::RenderFrameHost* main_frame) const;
++  */
+ 
+   // Returns whether a site is blocked to use Bluetooth scanning API.
+   virtual bool IsBluetoothScanningBlocked(
+diff --git a/content/public/browser/storage_partition.h b/content/public/browser/storage_partition.h
+index d52c6d5d34..578047b71a 100644
+--- a/content/public/browser/storage_partition.h
++++ b/content/public/browser/storage_partition.h
+@@ -68,7 +68,9 @@ class AttributionDataModel;
+ class BackgroundSyncContext;
+ class BrowserContext;
+ class BrowsingDataFilterBuilder;
++/*
+ class BrowsingTopicsSiteDataManager;
++*/
+ class ContentIndexContext;
+ class CookieDeprecationLabelManager;
+ class DedicatedWorkerService;
+@@ -164,7 +166,9 @@ class CONTENT_EXPORT StoragePartition : public base::SupportsUserData {
+   virtual ZoomLevelDelegate* GetZoomLevelDelegate() = 0;
+   virtual PlatformNotificationContext* GetPlatformNotificationContext() = 0;
+   virtual InterestGroupManager* GetInterestGroupManager() = 0;
++  /*
+   virtual BrowsingTopicsSiteDataManager* GetBrowsingTopicsSiteDataManager() = 0;
++  */
+   virtual AttributionDataModel* GetAttributionDataModel() = 0;
+   virtual PrivateAggregationDataModel* GetPrivateAggregationDataModel() = 0;
+   virtual CookieDeprecationLabelManager* GetCookieDeprecationLabelManager() = 0;
+diff --git a/content/test/BUILD.gn b/content/test/BUILD.gn
+index 7c43fd0c50..273bdc65ce 100644
+--- a/content/test/BUILD.gn
++++ b/content/test/BUILD.gn
+@@ -87,8 +87,6 @@ static_library("test_support") {
+     "../browser/background_fetch/mock_background_fetch_delegate.h",
+     "../browser/browsing_data/browsing_data_test_utils.cc",
+     "../browser/browsing_data/browsing_data_test_utils.h",
+-    "../browser/browsing_topics/test_util.cc",
+-    "../browser/browsing_topics/test_util.h",
+     "../browser/cookie_deprecation_label/cookie_deprecation_label_test_utils.h",
+     "../browser/file_system_access/mock_file_system_access_permission_context.cc",
+     "../browser/file_system_access/mock_file_system_access_permission_context.h",
+@@ -170,8 +168,6 @@ static_library("test_support") {
+     "../public/test/browser_test_utils.h",
+     "../public/test/browsing_data_remover_test_util.cc",
+     "../public/test/browsing_data_remover_test_util.h",
+-    "../public/test/browsing_topics_test_util.cc",
+-    "../public/test/browsing_topics_test_util.h",
+     "../public/test/commit_message_delayer.cc",
+     "../public/test/commit_message_delayer.h",
+     "../public/test/content_mock_cert_verifier.cc",
+@@ -521,7 +517,6 @@ static_library("test_support") {
+     "//components/attribution_reporting:mojom",
+     "//components/attribution_reporting:source_type_mojom",
+     "//components/breadcrumbs/core",
+-    "//components/browsing_topics/common:common",
+     "//components/network_session_configurator/common:common",
+     "//components/services/storage",
+     "//components/startup_metric_utils",
+@@ -1328,7 +1323,6 @@ test("content_browsertests") {
+     "../browser/browsing_data/browsing_data_remover_impl_browsertest.cc",
+     "../browser/browsing_data/clear_site_data_handler_browsertest.cc",
+     "../browser/browsing_data/conditional_cache_deletion_helper_browsertest.cc",
+-    "../browser/browsing_topics/browsing_topics_browsertest.cc",
+     "../browser/child_process_launcher_browsertest.cc",
+     "../browser/child_process_security_policy_browsertest.cc",
+     "../browser/closewatcher/close_listener_host_browsertest.cc",
+@@ -2326,10 +2320,6 @@ test("content_unittests") {
+     "../browser/browsing_data/browsing_data_filter_builder_impl_unittest.cc",
+     "../browser/browsing_data/browsing_data_remover_impl_unittest.cc",
+     "../browser/browsing_data/clear_site_data_handler_unittest.cc",
+-    "../browser/browsing_topics/browsing_topics_site_data_manager_impl_unittest.cc",
+-    "../browser/browsing_topics/browsing_topics_site_data_storage_unittest.cc",
+-    "../browser/browsing_topics/browsing_topics_url_loader_unittest.cc",
+-    "../browser/browsing_topics/header_util_unittest.cc",
+     "../browser/buckets/bucket_manager_host_unittest.cc",
+     "../browser/buckets/bucket_utils_unittest.cc",
+     "../browser/byte_stream_unittest.cc",
+@@ -2866,7 +2856,6 @@ test("content_unittests") {
+       "data/",
+       "//media/test/data/",
+       "//content/test/data/attribution_reporting/databases/",
+-      "//content/test/data/browsing_topics/",
+     ]
+   }
+   if (is_ios) {
+diff --git a/third_party/blink/renderer/bindings/generated_in_modules.gni b/third_party/blink/renderer/bindings/generated_in_modules.gni
+index 797d706836..965abb2f30 100644
+--- a/third_party/blink/renderer/bindings/generated_in_modules.gni
++++ b/third_party/blink/renderer/bindings/generated_in_modules.gni
+@@ -244,10 +244,6 @@ generated_dictionary_sources_in_modules = [
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_bluetooth_le_scan_options.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_bluetooth_manufacturer_data_filter_init.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_bluetooth_manufacturer_data_filter_init.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_browsing_topic.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_browsing_topic.h",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_browsing_topics_options.cc",
+-  "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_browsing_topics_options.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_cable_authentication_data.cc",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_cable_authentication_data.h",
+   "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_cache_query_options.cc",
+diff --git a/third_party/blink/renderer/bindings/idl_in_modules.gni b/third_party/blink/renderer/bindings/idl_in_modules.gni
+index a2764023bb..6c0024becb 100644
+--- a/third_party/blink/renderer/bindings/idl_in_modules.gni
++++ b/third_party/blink/renderer/bindings/idl_in_modules.gni
+@@ -74,9 +74,6 @@ static_idl_files_in_modules = [
+   "//third_party/blink/renderer/modules/breakout_box/media_stream_track_processor_init.idl",
+   "//third_party/blink/renderer/modules/breakout_box/video_track_generator.idl",
+   "//third_party/blink/renderer/modules/broadcastchannel/broadcast_channel.idl",
+-  "//third_party/blink/renderer/modules/browsing_topics/browsing_topic.idl",
+-  "//third_party/blink/renderer/modules/browsing_topics/browsing_topics_document_supplement.idl",
+-  "//third_party/blink/renderer/modules/browsing_topics/browsing_topics_options.idl",
+   "//third_party/blink/renderer/modules/buckets/navigator_storage_buckets.idl",
+   "//third_party/blink/renderer/modules/buckets/storage_bucket.idl",
+   "//third_party/blink/renderer/modules/buckets/storage_bucket_manager.idl",
+diff --git a/third_party/blink/renderer/modules/BUILD.gn b/third_party/blink/renderer/modules/BUILD.gn
+index 7a2dbbf51b..a61a7c509e 100644
+--- a/third_party/blink/renderer/modules/BUILD.gn
++++ b/third_party/blink/renderer/modules/BUILD.gn
+@@ -67,7 +67,6 @@ component("modules") {
+     "//third_party/blink/renderer/modules/beacon",
+     "//third_party/blink/renderer/modules/bluetooth",
+     "//third_party/blink/renderer/modules/broadcastchannel",
+-    "//third_party/blink/renderer/modules/browsing_topics",
+     "//third_party/blink/renderer/modules/buckets",
+     "//third_party/blink/renderer/modules/breakout_box",
+     "//third_party/blink/renderer/modules/mojo",

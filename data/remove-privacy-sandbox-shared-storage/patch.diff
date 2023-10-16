@@ -1,0 +1,228 @@
+diff --git a/services/network/BUILD.gn b/services/network/BUILD.gn
+index 4186f5a5c1..4d19a09295 100644
+--- a/services/network/BUILD.gn
++++ b/services/network/BUILD.gn
+@@ -333,7 +333,6 @@ component("network_service") {
+     "//services/network/public/cpp/cert_verifier:mojo_cert_verifier",
+     "//services/network/public/mojom",
+     "//services/network/public/proto",
+-    "//services/network/shared_storage",
+     "//services/network/trust_tokens",
+     "//services/service_manager/public/cpp",
+     "//services/service_manager/public/mojom",
+@@ -558,9 +557,6 @@ source_set("tests") {
+     "//services/network/public/cpp:buildflags",
+     "//services/network/public/mojom",
+     "//services/network/public/proto",
+-    "//services/network/shared_storage",
+-    "//services/network/shared_storage:test_support",
+-    "//services/network/shared_storage:tests",
+     "//services/network/trust_tokens",
+     "//services/network/trust_tokens:tests",
+     "//services/service_manager/public/cpp",
+diff --git a/services/network/cors/cors_url_loader.cc b/services/network/cors/cors_url_loader.cc
+index 634f92d3ac..47005f7036 100644
+--- a/services/network/cors/cors_url_loader.cc
++++ b/services/network/cors/cors_url_loader.cc
+@@ -43,7 +43,9 @@
+ #include "services/network/shared_dictionary/shared_dictionary_manager.h"
+ #include "services/network/shared_dictionary/shared_dictionary_storage.h"
+ #include "services/network/shared_dictionary/shared_dictionary_writer.h"
++/*
+ #include "services/network/shared_storage/shared_storage_header_utils.h"
++*/
+ #include "services/network/trust_tokens/trust_token_operation_metrics_recorder.h"
+ #include "services/network/url_loader.h"
+ #include "services/network/url_loader_factory.h"
+@@ -462,9 +464,11 @@ void CorsURLLoader::FollowRedirect(
+   }
+   request_.headers.MergeFrom(modified_headers);
+ 
++  /*
+   if (base::Contains(removed_headers, kSharedStorageWritableHeader)) {
+     request_.shared_storage_writable = false;
+   }
++  */
+ 
+   if (!allow_any_cors_exempt_header_ &&
+       !CorsURLLoaderFactory::IsValidCorsExemptHeaders(
+diff --git a/services/network/url_loader.cc b/services/network/url_loader.cc
+index e5347d7681..e686b9e4c1 100644
+--- a/services/network/url_loader.cc
++++ b/services/network/url_loader.cc
+@@ -94,7 +94,9 @@
+ #include "services/network/resource_scheduler/resource_scheduler_client.h"
+ #include "services/network/sec_header_helpers.h"
+ #include "services/network/shared_dictionary/shared_dictionary_access_checker.h"
++/*
+ #include "services/network/shared_storage/shared_storage_request_helper.h"
++*/
+ #include "services/network/throttling/scoped_throttling_token.h"
+ #include "services/network/trust_tokens/trust_token_request_helper.h"
+ #include "services/network/url_loader_factory.h"
+@@ -466,8 +468,11 @@ URLLoader::URLLoader(
+     mojo::PendingRemote<mojom::DevToolsObserver> devtools_observer,
+     mojo::PendingRemote<mojom::AcceptCHFrameObserver> accept_ch_frame_observer,
+     net::CookieSettingOverrides cookie_setting_overrides,
++    std::unique_ptr<AttributionRequestHelper> attribution_request_helper)
++    /*
+     std::unique_ptr<AttributionRequestHelper> attribution_request_helper,
+     bool shared_storage_writable)
++    */
+     : url_request_context_(context.GetUrlRequestContext()),
+       network_context_client_(context.GetNetworkContextClient()),
+       delete_callback_(std::move(delete_callback)),
+@@ -524,10 +529,12 @@ URLLoader::URLLoader(
+       devtools_observer_remote_(std::move(devtools_observer)),
+       devtools_observer_(PtrOrFallback(devtools_observer_remote_,
+                                        context.GetDevToolsObserver())),
++      /*
+       shared_storage_request_helper_(
+           std::make_unique<SharedStorageRequestHelper>(
+               shared_storage_writable,
+               url_loader_network_observer_)),
++      */
+       has_fetch_streaming_upload_body_(HasFetchStreamingUploadBody(&request)),
+       allow_http1_for_streaming_upload_(
+           request.request_body &&
+@@ -866,8 +873,10 @@ void URLLoader::SetUpUpload(const ResourceRequest& request,
+ }
+ 
+ void URLLoader::ProcessOutboundSharedStorageInterceptor() {
++  /*
+   DCHECK(shared_storage_request_helper_);
+   shared_storage_request_helper_->ProcessOutgoingRequest(*url_request_);
++  */
+   ScheduleStart();
+ }
+ 
+@@ -1101,9 +1110,11 @@ void URLLoader::FollowRedirect(
+ 
+   // Propagate removal of shared storage eligiblity to the helper if the
+   // "Shared-Storage-Writable" request header has been removed.
++  /*
+   DCHECK(shared_storage_request_helper_);
+   shared_storage_request_helper_
+       ->RemoveEligibilityIfSharedStorageWritableRemoved(removed_headers);
++  */
+ 
+   deferred_redirect_url_.reset();
+   new_redirect_url_ = new_url;
+@@ -1409,15 +1420,20 @@ void URLLoader::OnReceivedRedirect(net::URLRequest* url_request,
+ void URLLoader::ProcessInboundSharedStorageInterceptorOnReceivedRedirect(
+     const ::net::RedirectInfo& redirect_info,
+     mojom::URLResponseHeadPtr response) {
++  /*
+   DCHECK(shared_storage_request_helper_);
++  */
+   uint64_t response_index = next_on_receive_redirect_response_index_++;
+   on_receive_redirect_responses_[response_index] = std::move(response);
++  /*
+   if (!shared_storage_request_helper_->ProcessIncomingResponse(
+           *url_request_, base::BindOnce(&URLLoader::ContinueOnReceiveRedirect,
+                                         weak_ptr_factory_.GetWeakPtr(),
+                                         redirect_info, response_index))) {
+     ContinueOnReceiveRedirect(redirect_info, response_index);
+   }
++  */
++  ContinueOnReceiveRedirect(redirect_info, response_index);
+ }
+ 
+ void URLLoader::ProcessInboundAttributionInterceptorOnReceivedRedirect(
+@@ -1558,12 +1574,15 @@ void URLLoader::OnSSLCertificateError(net::URLRequest* request,
+ }
+ 
+ void URLLoader::ProcessInboundSharedStorageInterceptorOnResponseStarted() {
++  /*
+   DCHECK(shared_storage_request_helper_);
+   if (!shared_storage_request_helper_->ProcessIncomingResponse(
+           *url_request_, base::BindOnce(&URLLoader::ContinueOnResponseStarted,
+                                         weak_ptr_factory_.GetWeakPtr()))) {
+     ContinueOnResponseStarted();
+   }
++  */
++  ContinueOnResponseStarted();
+ }
+ 
+ void URLLoader::ProcessInboundAttributionInterceptorOnResponseStarted() {
+diff --git a/services/network/url_loader.h b/services/network/url_loader.h
+index 5ac365a6aa..97b6ed722f 100644
+--- a/services/network/url_loader.h
++++ b/services/network/url_loader.h
+@@ -56,7 +56,9 @@
+ #include "services/network/resource_scheduler/resource_scheduler.h"
+ #include "services/network/resource_scheduler/resource_scheduler_client.h"
+ #include "services/network/shared_dictionary/shared_dictionary_access_checker.h"
++/*
+ #include "services/network/shared_storage/shared_storage_request_helper.h"
++*/
+ #include "services/network/trust_tokens/pending_trust_token_store.h"
+ #include "services/network/trust_tokens/trust_token_request_helper.h"
+ #include "services/network/trust_tokens/trust_token_request_helper_factory.h"
+@@ -176,8 +178,11 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) URLLoader
+       mojo::PendingRemote<mojom::AcceptCHFrameObserver>
+           accept_ch_frame_observer,
+       net::CookieSettingOverrides cookie_setting_overrides,
++      std::unique_ptr<AttributionRequestHelper> attribution_request_helper);
++      /*
+       std::unique_ptr<AttributionRequestHelper> attribution_request_helper,
+       bool shared_storage_writable);
++      */
+ 
+   URLLoader(const URLLoader&) = delete;
+   URLLoader& operator=(const URLLoader&) = delete;
+@@ -275,9 +280,11 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) URLLoader
+     return devtools_request_id_;
+   }
+ 
++  /*
+   SharedStorageRequestHelper* shared_storage_request_helper() const {
+     return shared_storage_request_helper_.get();
+   }
++  */
+ 
+   void SetEnableReportingRawHeaders(bool enable);
+ 
+@@ -755,7 +762,9 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) URLLoader
+ 
+   // Request helper responsible for processing Shared Storage headers
+   // (https://github.com/WICG/shared-storage#from-response-headers).
++  /*
+   std::unique_ptr<SharedStorageRequestHelper> shared_storage_request_helper_;
++  */
+ 
+   // Indicates |url_request_| is fetch upload request and that has streaming
+   // body.
+diff --git a/services/network/url_loader_factory.cc b/services/network/url_loader_factory.cc
+index 3dfe26ee59..3e1d0dbb83 100644
+--- a/services/network/url_loader_factory.cc
++++ b/services/network/url_loader_factory.cc
+@@ -385,8 +385,11 @@ void URLLoaderFactory::CreateLoaderAndStartWithSyncClient(
+       std::move(shared_dictionary_checker), std::move(cookie_observer),
+       std::move(trust_token_observer), std::move(url_loader_network_observer),
+       std::move(devtools_observer), std::move(accept_ch_frame_observer),
++      /*
+       params_->cookie_setting_overrides, std::move(attribution_request_helper),
+       resource_request.shared_storage_writable);
++      */
++      params_->cookie_setting_overrides, std::move(attribution_request_helper));
+ 
+   if (context_->GetMemoryCache())
+     loader->SetMemoryCache(context_->GetMemoryCache()->GetWeakPtr());
+diff --git a/services/network/url_loader_unittest.cc b/services/network/url_loader_unittest.cc
+index e2ebfa1e5c..54e910c4b8 100644
+--- a/services/network/url_loader_unittest.cc
++++ b/services/network/url_loader_unittest.cc
+@@ -103,10 +103,12 @@
+ #include "services/network/public/mojom/url_loader.mojom.h"
+ #include "services/network/resource_scheduler/resource_scheduler_client.h"
+ #include "services/network/shared_dictionary/shared_dictionary_access_checker.h"
++/*
+ #include "services/network/shared_storage/shared_storage_header_utils.h"
+ #include "services/network/shared_storage/shared_storage_request_helper.h"
+ #include "services/network/shared_storage/shared_storage_test_url_loader_network_observer.h"
+ #include "services/network/shared_storage/shared_storage_test_utils.h"
++*/
+ #include "services/network/test/mock_devtools_observer.h"
+ #include "services/network/test/test_data_pipe_getter.h"
+ #include "services/network/test/test_network_context_client.h"

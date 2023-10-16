@@ -21,7 +21,7 @@ index a7463d5e82..6a50ddf3ad 100644
      "//components/captive_portal/core",
      "//components/captive_portal/core:buildflags",
 diff --git a/chrome/browser/browsing_data/chrome_browsing_data_model_delegate.cc b/chrome/browser/browsing_data/chrome_browsing_data_model_delegate.cc
-index 346c184e3c..46348c2e81 100644
+index 346c184e3c..7cf6afd8f9 100644
 --- a/chrome/browser/browsing_data/chrome_browsing_data_model_delegate.cc
 +++ b/chrome/browser/browsing_data/chrome_browsing_data_model_delegate.cc
 @@ -9,9 +9,13 @@
@@ -54,14 +54,51 @@ index 346c184e3c..46348c2e81 100644
  
    if (storage_types.Has(static_cast<BrowsingDataModel::StorageType>(
            StorageType::kMediaDeviceSalt))) {
-@@ -189,6 +195,7 @@ ChromeBrowsingDataModelDelegate::IsBlockedByThirdPartyCookieBlocking(
-       static_cast<int>(StorageType::kFirstType)) {
-     return absl::nullopt;
+@@ -166,10 +172,12 @@ ChromeBrowsingDataModelDelegate::GetDataOwner(
+           << "Unsupported IWA DataKey type: " << data_key.index();
+       return absl::get<url::Origin>(data_key);
+ 
++    /*
+     case StorageType::kTopics:
+       CHECK(absl::holds_alternative<url::Origin>(data_key))
+           << "Unsupported Topics DataKey type: " << data_key.index();
+       return absl::get<url::Origin>(data_key).host();
++    */
+ 
+     case StorageType::kMediaDeviceSalt:
+       CHECK(absl::holds_alternative<blink::StorageKey>(data_key))
+@@ -191,7 +199,9 @@ ChromeBrowsingDataModelDelegate::IsBlockedByThirdPartyCookieBlocking(
    }
-+  // ?
    switch (
        static_cast<ChromeBrowsingDataModelDelegate::StorageType>(storage_type)) {
++    /*
      case StorageType::kTopics:
++    */
+     case StorageType::kIsolatedWebApp:
+     case StorageType::kMediaDeviceSalt:
+       return false;
+diff --git a/chrome/browser/browsing_data/chrome_browsing_data_model_delegate.h b/chrome/browser/browsing_data/chrome_browsing_data_model_delegate.h
+index 3255d521fc..c7b3c3a9bb 100644
+--- a/chrome/browser/browsing_data/chrome_browsing_data_model_delegate.h
++++ b/chrome/browser/browsing_data/chrome_browsing_data_model_delegate.h
+@@ -23,12 +23,17 @@ class ChromeBrowsingDataModelDelegate : public BrowsingDataModel::Delegate {
+   // incomplete implementations, and are marked as such.
+   // TODO(crbug.com/1271155): Complete implementations for all browsing data.
+   enum class StorageType {
++    /*
+     kTopics = static_cast<int>(BrowsingDataModel::StorageType::kLastType) +
+               1,      // Not fetched from disk.
++    */
+     kIsolatedWebApp,  // Not yet deletable.
+     kMediaDeviceSalt,
+ 
++    kFirstType = kIsolatedWebApp,
++    /*
+     kFirstType = kTopics,
++    */
+     kLastType = kMediaDeviceSalt,
+   };
+ 
 diff --git a/chrome/browser/browsing_data/chrome_browsing_data_remover_delegate.cc b/chrome/browser/browsing_data/chrome_browsing_data_remover_delegate.cc
 index 8b9a88073c..2264e5a29b 100644
 --- a/chrome/browser/browsing_data/chrome_browsing_data_remover_delegate.cc
@@ -642,6 +679,399 @@ index b7f3bdf8b0..52757e7d3b 100644
      "$root_gen_dir/chrome/components_resources.pak",
      "$root_gen_dir/chrome/dev_ui_browser_resources.pak",
      "$root_gen_dir/chrome/engagement_resources.pak",
+diff --git a/chrome/browser/resources/settings/BUILD.gn b/chrome/browser/resources/settings/BUILD.gn
+index 3cd7d06189..c267c539ac 100644
+--- a/chrome/browser/resources/settings/BUILD.gn
++++ b/chrome/browser/resources/settings/BUILD.gn
+@@ -154,7 +154,6 @@ build_webui("build") {
+     "privacy_sandbox/privacy_sandbox_fledge_subpage.ts",
+     "privacy_sandbox/privacy_sandbox_interest_item.ts",
+     "privacy_sandbox/privacy_sandbox_page.ts",
+-    "privacy_sandbox/privacy_sandbox_topics_subpage.ts",
+     "reset_page/reset_page.ts",
+     "reset_page/reset_profile_banner.ts",
+     "reset_page/reset_profile_dialog.ts",
+diff --git a/chrome/browser/resources/settings/lazy_load.ts b/chrome/browser/resources/settings/lazy_load.ts
+index 472c32a95e..96a0c72f81 100644
+--- a/chrome/browser/resources/settings/lazy_load.ts
++++ b/chrome/browser/resources/settings/lazy_load.ts
+@@ -21,7 +21,9 @@ import './privacy_sandbox/privacy_sandbox_ad_measurement_subpage.js';
+ import './privacy_sandbox/privacy_sandbox_fledge_subpage.js';
+ import './privacy_sandbox/privacy_sandbox_interest_item.js';
+ import './privacy_sandbox/privacy_sandbox_page.js';
++/*
+ import './privacy_sandbox/privacy_sandbox_topics_subpage.js';
++*/
+ import './privacy_page/security_keys_subpage.js';
+ import './privacy_page/security_keys_phones_subpage.js';
+ import './privacy_page/security_keys_phones_list.js';
+@@ -190,7 +192,9 @@ export {SettingsPrivacySandboxAdMeasurementSubpageElement} from './privacy_sandb
+ export {SettingsPrivacySandboxFledgeSubpageElement} from './privacy_sandbox/privacy_sandbox_fledge_subpage.js';
+ export {PrivacySandboxInterestItemElement} from './privacy_sandbox/privacy_sandbox_interest_item.js';
+ export {SettingsPrivacySandboxPageElement} from './privacy_sandbox/privacy_sandbox_page.js';
++/*
+ export {SettingsPrivacySandboxTopicsSubpageElement} from './privacy_sandbox/privacy_sandbox_topics_subpage.js';
++*/
+ export {SettingsResetPageElement} from './reset_page/reset_page.js';
+ export {SettingsResetProfileDialogElement} from './reset_page/reset_profile_dialog.js';
+ export {SettingsSafetyHubExtensionsModuleElement} from './safety_hub/extensions_module.js';
+diff --git a/chrome/browser/resources/settings/privacy_sandbox/app.html b/chrome/browser/resources/settings/privacy_sandbox/app.html
+index 298add3157..9dd5f6a92d 100644
+--- a/chrome/browser/resources/settings/privacy_sandbox/app.html
++++ b/chrome/browser/resources/settings/privacy_sandbox/app.html
+@@ -217,6 +217,7 @@
+                   privacySandboxSettingsView)]]">
+         <div slot="title">$i18n{privacySandboxLearnMoreDialogTitle}</div>
+         <div slot="body">
++          <!--
+           <div class="learn-more-section-title">
+             $i18n{privacySandboxLearnMoreDialogTopicsTitle}
+           </div>
+@@ -242,6 +243,7 @@
+               </li>
+             </ul>
+           </div>
++          -->
+           <div class="learn-more-section-title">
+             $i18n{privacySandboxLearnMoreDialogFledgeTitle}
+           </div>
+diff --git a/chrome/browser/resources/settings/privacy_sandbox/app.ts b/chrome/browser/resources/settings/privacy_sandbox/app.ts
+index abdb86c49d..b3aaedd870 100644
+--- a/chrome/browser/resources/settings/privacy_sandbox/app.ts
++++ b/chrome/browser/resources/settings/privacy_sandbox/app.ts
+@@ -15,7 +15,10 @@ import {afterNextRender, PolymerElement} from 'chrome://resources/polymer/v3_0/p
+ // Those resources are loaded through settings.js as the privacy sandbox page
+ // lives outside regular settings, hence can't access those resources directly
+ // with |optimize_webui="true"|.
+-import {CrSettingsPrefs, FledgeState, HatsBrowserProxyImpl, loadTimeData, MetricsBrowserProxy, MetricsBrowserProxyImpl, PrefsMixin, PrivacySandboxBrowserProxy, PrivacySandboxBrowserProxyImpl, PrivacySandboxInterest, SettingsToggleButtonElement, TooltipMixin, TopicsState, TrustSafetyInteraction} from '../settings.js';
++/*
++chrome/browser/resources/settings/privacy_sandbox/interest_item.ts
++*/
++import {CrSettingsPrefs, FledgeState, HatsBrowserProxyImpl, loadTimeData, MetricsBrowserProxy, MetricsBrowserProxyImpl, PrefsMixin, PrivacySandboxBrowserProxy, PrivacySandboxBrowserProxyImpl, PrivacySandboxInterest, SettingsToggleButtonElement, TooltipMixin, TrustSafetyInteraction} from '../settings.js';
+ 
+ import {getTemplate} from './app.html.js';
+ 
+@@ -68,6 +71,7 @@ export class PrivacySandboxAppElement extends PrivacySandboxAppElementBase {
+        * arrays are used as models to keep the UI in sync with the backend's
+        * expected Topics/Fledge states, while the user is on the page.
+        */
++      /*
+       topTopics_: {
+         type: Array,
+         value() {
+@@ -81,6 +85,7 @@ export class PrivacySandboxAppElement extends PrivacySandboxAppElementBase {
+           return [];
+         },
+       },
++      */
+ 
+       joiningSites_: {
+         type: Array,
+@@ -103,8 +108,10 @@ export class PrivacySandboxAppElement extends PrivacySandboxAppElementBase {
+   private privacySandboxBrowserProxy_: PrivacySandboxBrowserProxy =
+       PrivacySandboxBrowserProxyImpl.getInstance();
+   privacySandboxSettingsView: PrivacySandboxSettingsView;
++  /*
+   private topTopics_: PrivacySandboxInterest[];
+   private blockedTopics_: PrivacySandboxInterest[];
++  */
+   private joiningSites_: PrivacySandboxInterest[];
+   private blockedSites_: PrivacySandboxInterest[];
+ 
+@@ -115,8 +122,10 @@ export class PrivacySandboxAppElement extends PrivacySandboxAppElementBase {
+     chrome.metricsPrivate.recordSparseValueWithPersistentHash(
+         'WebUI.Settings.PathVisited', '/privacySandbox');
+ 
++    /*
+     this.privacySandboxBrowserProxy_.getTopicsState().then(
+         state => this.onTopicsStateChanged_(state));
++    */
+     this.privacySandboxBrowserProxy_.getFledgeState().then(
+         state => this.onFledgeStateChanged_(state));
+ 
+@@ -165,7 +174,9 @@ export class PrivacySandboxAppElement extends PrivacySandboxAppElementBase {
+     // As the backend will have cleared any data when the API is disabled, clear
+     // the associated model entries.
+     if (!privacySandboxApisEnabled) {
++      /*
+       this.topTopics_ = [];
++      */
+       this.joiningSites_ = [];
+     }
+   }
+@@ -220,7 +231,9 @@ export class PrivacySandboxAppElement extends PrivacySandboxAppElementBase {
+     const enabled = this.getPref('privacy_sandbox.apis_enabled_v2').value;
+     if (enabled) {
+       return loadTimeData.getString(
++          /*
+           this.topTopics_.length || this.blockedTopics_.length ||
++          */
+                   this.joiningSites_.length || this.blockedSites_.length ?
+               'privacySandboxAdPersonalizationDialogDescription' :
+               'privacySandboxAdPersonalizationDialogDescriptionListsEmpty');
+@@ -273,6 +286,7 @@ export class PrivacySandboxAppElement extends PrivacySandboxAppElementBase {
+     return interests.length > 0;
+   }
+ 
++  /*
+   private onTopicsStateChanged_(state: TopicsState) {
+     this.topTopics_ = state.topTopics.map(topic => {
+       return {topic, removed: false};
+@@ -306,8 +320,9 @@ export class PrivacySandboxAppElement extends PrivacySandboxAppElementBase {
+             'Settings.PrivacySandbox.RemovedInterests.TopicAdded' :
+             'Settings.PrivacySandbox.AdPersonalization.TopicRemoved');
+     this.privacySandboxBrowserProxy_.setTopicAllowed(
+-        interest.topic!, /*allowed=*/ interest.removed);
++        interest.topic!, allowed= interest.removed);
+   }
++  */
+ 
+   private onFledgeStateChanged_(state: FledgeState) {
+     this.joiningSites_ = state.joiningSites.map(site => {
+@@ -343,11 +358,14 @@ export class PrivacySandboxAppElement extends PrivacySandboxAppElementBase {
+ 
+   private onInterestChanged_(e: CustomEvent<PrivacySandboxInterest>) {
+     const interest = e.detail;
++    this.onSiteInteracted_(interest);
++    /*
+     if (interest.topic !== undefined) {
+       this.onTopicInteracted_(interest);
+     } else {
+       this.onSiteInteracted_(interest);
+     }
++    */
+   }
+ 
+   private onShowTooltip_(e: Event) {
+diff --git a/chrome/browser/resources/settings/privacy_sandbox/interest_item.ts b/chrome/browser/resources/settings/privacy_sandbox/interest_item.ts
+index 1e9ba8bd99..31641892d9 100644
+--- a/chrome/browser/resources/settings/privacy_sandbox/interest_item.ts
++++ b/chrome/browser/resources/settings/privacy_sandbox/interest_item.ts
+@@ -36,6 +36,8 @@ export class PrivacySandboxInterestItemElement extends PolymerElement {
+   model: PrivacySandboxInterest;
+ 
+   private getDisplayString_(): string {
++    return this.model.site!;
++    /*
+     if (this.model.topic !== undefined) {
+       assert(!this.model.site);
+       return this.model.topic.displayString;
+@@ -43,6 +45,7 @@ export class PrivacySandboxInterestItemElement extends PolymerElement {
+       assert(!this.model.topic);
+       return this.model.site!;
+     }
++    */
+   }
+ 
+   private getButtonLabel_(): string {
+diff --git a/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_browser_proxy.ts b/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_browser_proxy.ts
+index 53840af36b..6e19f59386 100644
+--- a/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_browser_proxy.ts
++++ b/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_browser_proxy.ts
+@@ -11,8 +11,12 @@ import {sendWithPromise} from 'chrome://resources/js/cr.js';
+  */
+ export interface PrivacySandboxInterest {
+   removed: boolean;
++  /*
+   topic?: CanonicalTopic;
+   site?: string;
++  */
++  topic?: undefined;
++  site: string;
+ }
+ 
+ export interface FledgeState {
+@@ -24,6 +28,7 @@ export interface FledgeState {
+  * The canonical form of a Topics API topic. Must be kept in sync with the
+  * version at components/privacy_sandbox/canonical_topic.h.
+  */
++/*
+ export interface CanonicalTopic {
+   topicId: number;
+   taxonomyVersion: number;
+@@ -34,6 +39,7 @@ export interface TopicsState {
+   topTopics: CanonicalTopic[];
+   blockedTopics: CanonicalTopic[];
+ }
++*/
+ 
+ export interface PrivacySandboxBrowserProxy {
+   /** Retrieves the user's current FLEDGE state. */
+@@ -43,16 +49,22 @@ export interface PrivacySandboxBrowserProxy {
+   setFledgeJoiningAllowed(site: string, allowed: boolean): void;
+ 
+   /** Retrieves the user's current Topics state. */
++  /*
+   getTopicsState(): Promise<TopicsState>;
++  */
+ 
+   /** Sets |topic| to |allowed| for the Topics API.*/
++  /*
+   setTopicAllowed(topic: CanonicalTopic, allowed: boolean): void;
++  */
+ 
+   /**
+    * Informs the Privacy Sandbox Service that the user interacted with the
+    * Topics toggle.
+    */
++  /*
+   topicsToggleChanged(newToggleValue: boolean): void;
++  */
+ }
+ 
+ export class PrivacySandboxBrowserProxyImpl implements
+@@ -65,6 +77,7 @@ export class PrivacySandboxBrowserProxyImpl implements
+     chrome.send('setFledgeJoiningAllowed', [site, allowed]);
+   }
+ 
++  /*
+   getTopicsState() {
+     return sendWithPromise('getTopicsState');
+   }
+@@ -77,6 +90,7 @@ export class PrivacySandboxBrowserProxyImpl implements
+   topicsToggleChanged(newToggleValue: boolean) {
+     chrome.send('topicsToggleChanged', [newToggleValue]);
+   }
++  */
+ 
+   static getInstance(): PrivacySandboxBrowserProxy {
+     return instance || (instance = new PrivacySandboxBrowserProxyImpl());
+diff --git a/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_interest_item.ts b/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_interest_item.ts
+index 9e5935cc7c..4ff25af159 100644
+--- a/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_interest_item.ts
++++ b/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_interest_item.ts
+@@ -38,6 +38,8 @@ export class PrivacySandboxInterestItemElement extends
+   interest: PrivacySandboxInterest;
+ 
+   private getDisplayString_(): string {
++    return this.interest.site!;
++    /*
+     if (this.interest.topic !== undefined) {
+       assert(!this.interest.site);
+       return this.interest.topic.displayString;
+@@ -45,9 +47,14 @@ export class PrivacySandboxInterestItemElement extends
+       assert(!this.interest.topic);
+       return this.interest.site!;
+     }
++    */
+   }
+ 
+   private getButtonLabel_(): string {
++    return this.i18n(
++        this.interest.removed ? 'fledgePageAllowSite' :
++                                'fledgePageBlockSite');
++    /*
+     if (this.interest.topic !== undefined) {
+       assert(!this.interest.site);
+       return this.i18n(
+@@ -59,9 +66,15 @@ export class PrivacySandboxInterestItemElement extends
+           this.interest.removed ? 'fledgePageAllowSite' :
+                                   'fledgePageBlockSite');
+     }
++    */
+   }
+ 
+   private getButtonAriaLabel_(): string {
++      return this.i18n(
++          this.interest.removed ? 'fledgePageAllowSiteA11yLabel' :
++                                  'fledgePageBlockSiteA11yLabel',
++          this.interest.site!);
++    /*
+     if (this.interest.topic !== undefined) {
+       assert(!this.interest.site);
+       return this.i18n(
+@@ -75,6 +88,7 @@ export class PrivacySandboxInterestItemElement extends
+                                   'fledgePageBlockSiteA11yLabel',
+           this.interest.site!);
+     }
++    */
+   }
+ 
+   private onInterestChanged_(e: Event) {
+diff --git a/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_page.html b/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_page.html
+index 8f46cadd24..26b259434d 100644
+--- a/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_page.html
++++ b/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_page.html
+@@ -12,6 +12,7 @@
+       src="chrome://settings/images/ad_privacy_banner.svg">
+ </picture>
+ <template is="dom-if" if="[[!isPrivacySandboxRestricted_]]">
++  <!--
+   <cr-link-row
+       id="privacySandboxTopicsLinkRow"
+       start-icon="settings20:interests"
+@@ -19,6 +20,7 @@
+       sub-label="[[computePrivacySandboxTopicsSublabel_(
+           prefs.privacy_sandbox.m1.topics_enabled.value)]]"
+       on-click="onPrivacySandboxTopicsClick_"></cr-link-row>
++  -->
+   <cr-link-row
+       id="privacySandboxFledgeLinkRow"
+       start-icon="settings20:checklist"
+diff --git a/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_page.ts b/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_page.ts
+index 2d0849a301..23354bbe94 100644
+--- a/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_page.ts
++++ b/chrome/browser/resources/settings/privacy_sandbox/privacy_sandbox_page.ts
+@@ -77,6 +77,7 @@ export class SettingsPrivacySandboxPageElement extends
+ 
+   private focusConfigChanged_(_newConfig: FocusConfig, oldConfig: FocusConfig) {
+     assert(!oldConfig);
++    /*
+     if (routes.PRIVACY_SANDBOX_TOPICS) {
+       this.focusConfig.set(routes.PRIVACY_SANDBOX_TOPICS.path, () => {
+         const toFocus = this.shadowRoot!.querySelector<HTMLElement>(
+@@ -85,6 +86,7 @@ export class SettingsPrivacySandboxPageElement extends
+         focusWithoutInk(toFocus);
+       });
+     }
++    */
+     if (routes.PRIVACY_SANDBOX_FLEDGE) {
+       this.focusConfig.set(routes.PRIVACY_SANDBOX_FLEDGE.path, () => {
+         const toFocus = this.shadowRoot!.querySelector<HTMLElement>(
+@@ -103,12 +105,14 @@ export class SettingsPrivacySandboxPageElement extends
+     }
+   }
+ 
++  /*
+   private computePrivacySandboxTopicsSublabel_(): string {
+     const enabled = this.getPref('privacy_sandbox.m1.topics_enabled').value;
+     return this.i18n(
+         enabled ? 'adPrivacyPageTopicsLinkRowSubLabelEnabled' :
+                   'adPrivacyPageTopicsLinkRowSubLabelDisabled');
+   }
++  */
+ 
+   private computePrivacySandboxFledgeSublabel_(): string {
+     const enabled = this.getPref('privacy_sandbox.m1.fledge_enabled').value;
+@@ -125,11 +129,13 @@ export class SettingsPrivacySandboxPageElement extends
+                   'adPrivacyPageAdMeasurementLinkRowSubLabelDisabled');
+   }
+ 
++  /*
+   private onPrivacySandboxTopicsClick_() {
+     this.metricsBrowserProxy_.recordAction(
+         'Settings.PrivacySandbox.Topics.Opened');
+     Router.getInstance().navigateTo(routes.PRIVACY_SANDBOX_TOPICS);
+   }
++  */
+ 
+   private onPrivacySandboxFledgeClick_() {
+     this.metricsBrowserProxy_.recordAction(
+diff --git a/chrome/browser/resources/settings/settings.ts b/chrome/browser/resources/settings/settings.ts
+index 62243ae56b..ab93455b5b 100644
+--- a/chrome/browser/resources/settings/settings.ts
++++ b/chrome/browser/resources/settings/settings.ts
+@@ -84,7 +84,10 @@ export {TabDiscardExceptionAddDialogTabs, TabDiscardExceptionTabbedAddDialogElem
+ export {MAX_TAB_DISCARD_EXCEPTION_RULE_LENGTH, TAB_DISCARD_EXCEPTIONS_MANAGED_PREF, TAB_DISCARD_EXCEPTIONS_PREF} from './performance_page/tab_discard_exception_validation_mixin.js';
+ export {PrivacyGuideBrowserProxy, PrivacyGuideBrowserProxyImpl} from './privacy_page/privacy_guide/privacy_guide_browser_proxy.js';
+ export {SettingsPrivacyPageElement} from './privacy_page/privacy_page.js';
++/*
+ export {CanonicalTopic, FledgeState, PrivacySandboxBrowserProxy, PrivacySandboxBrowserProxyImpl, PrivacySandboxInterest, TopicsState} from './privacy_sandbox/privacy_sandbox_browser_proxy.js';
++*/
++export {FledgeState, PrivacySandboxBrowserProxy, PrivacySandboxBrowserProxyImpl, PrivacySandboxInterest} from './privacy_sandbox/privacy_sandbox_browser_proxy.js';
+ export {RelaunchMixin, RestartType} from './relaunch_mixin.js';
+ export {ResetBrowserProxy, ResetBrowserProxyImpl} from './reset_page/reset_browser_proxy.js';
+ export {SettingsResetProfileBannerElement} from './reset_page/reset_profile_banner.js';
 diff --git a/chrome/browser/ui/BUILD.gn b/chrome/browser/ui/BUILD.gn
 index 23a2fa2edc..bbe1e942e5 100644
 --- a/chrome/browser/ui/BUILD.gn

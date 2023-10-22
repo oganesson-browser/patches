@@ -1,0 +1,18 @@
+diff --git a/content/browser/keyboard_lock/keyboard_lock_service_impl.cc b/content/browser/keyboard_lock/keyboard_lock_service_impl.cc
+index 938e8e9367..46bddb4105 100644
+--- a/content/browser/keyboard_lock/keyboard_lock_service_impl.cc
++++ b/content/browser/keyboard_lock/keyboard_lock_service_impl.cc
+@@ -130,10 +130,9 @@ void KeyboardLockServiceImpl::GetKeyboardLayoutMap(
+       static_cast<RenderFrameHostImpl&>(render_frame_host());
+ 
+   auto response = GetKeyboardLayoutMapResult::New();
+-  // The keyboard layout map is only accessible from the outermost main frame or
+-  // with the permission policy enabled.
+-  if (frame_host_impl.GetParentOrOuterDocument() &&
+-      !frame_host_impl.IsFeatureEnabled(
++  // The keyboard layout map is only accessible if allowed by corresponding permissions policy
++  // with default allowlist set to 'self'.
++  if (!frame_host_impl.IsFeatureEnabled(
+           blink::mojom::PermissionsPolicyFeature::kKeyboardMap)) {
+     response->status = blink::mojom::GetKeyboardLayoutMapStatus::kDenied;
+     std::move(callback).Run(std::move(response));
